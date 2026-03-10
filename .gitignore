@@ -4,3 +4,6 @@ x64/
 Debug/
 Release/
 *.user
+
+# Bỏ qua file dữ liệu cá nhân, không cho up lên mạng
+*.csv

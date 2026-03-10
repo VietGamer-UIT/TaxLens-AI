@@ -8,4 +8,5 @@ private:
 public:
     SmartAdvisorBot(double budget);
     void advise();
+	void docLichSuKhopLenh(); //Hàm đọc lịch sử khớp lệnh từ file (nếu cần thiết)
 };
