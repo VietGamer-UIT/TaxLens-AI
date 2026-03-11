@@ -94,11 +94,12 @@ void SmartAdvisorBot::docLichSuKhopLenh() {
             file.close();
         }
     }
-    if (tongKhoiLuong > 0) {
+    this->tongSoCCQ = tongKhoiLuong;
+    if (this->tongSoCCQ > 0) {
+        this->giaVonTrungBinh = tongTien / tongKhoiLuong;
         cout << "=> Da quet thanh cong " << soFileDaDoc << " file lich su giao dich." << endl;
-        double giaVonTrungBinh = tongTien / tongKhoiLuong;
-        cout << "=> Tong so ETF dang nam giu: " << tongKhoiLuong << " ccq" << endl;
-        cout << "=> GIA VON TRUNG BINH CUA BAN: " << fixed << setprecision(0) << giaVonTrungBinh << " VND" << endl;
+        cout << "=> Tong so ETF dang nam giu: " << this->tongSoCCQ << " ccq" << endl;
+        cout << "=> GIA VON TRUNG BINH CUA BAN: " << fixed << setprecision(0) << this->giaVonTrungBinh << " VND" << endl;
     }
     else {
         cout << "=> Chua tim thay lich su MUA E1VFVN30 hoac chua co file CSV." << endl;
@@ -124,8 +125,27 @@ void SmartAdvisorBot::advise() {
     double currentPE = dataFetcher.fetchPE();
     double currentRate = dataFetcher.fetchInterestRate();
     double currentPrice = dataFetcher.fetchE1Price();
-    if (giaVonTrungBinh > 0) {
-        double tySuatLoiNhuan = ((currentPrice - giaVonTrungBinh) / giaVonTrungBinh) * 100;
+    if (this->tongSoCCQ > 0) {
+        double giaTriHienTai = this->tongSoCCQ * currentPrice;
+        double tongVon = this->tongSoCCQ * this->giaVonTrungBinh;
+        double laiLoVal = giaTriHienTai - tongVon;
+        double phanTramLaiLo = (laiLoVal / tongVon) * 100;
+
+        cout << "\n------------------------------------------------------\n";
+        cout << "          [BAO CAO TAI SAN - PORTFOLIO]               \n";
+        cout << "------------------------------------------------------\n";
+        cout << " Tong so CCQ dang co : " << this->tongSoCCQ << " E1VFVN30\n";
+        cout << " Gia von trung binh  : " << fixed << setprecision(0) << this->giaVonTrungBinh << " VND\n";
+        cout << " Gia tri thi truong  : " << giaTriHienTai << " VND\n";
+        if (laiLoVal >= 0)
+            cout << " Lai/Lo tam tinh     : +" << laiLoVal << " VND (+" << setprecision(2) << phanTramLaiLo << "%)\n";
+        else
+            cout << " Lai/Lo tam tinh     : " << laiLoVal << " VND (" << setprecision(2) << phanTramLaiLo << "%)\n";
+
+        cout << "------------------------------------------------------\n";
+    }
+    if (this->giaVonTrungBinh > 0) {
+        double tySuatLoiNhuan = ((currentPrice - this->giaVonTrungBinh) / this->giaVonTrungBinh) * 100;
         cout << "\n[Hệ thống] Hieu suat danh muc hien tai: ";
         if (tySuatLoiNhuan > 0) cout << "+" << fixed << setprecision(2) << tySuatLoiNhuan << "% (DANG LAI) \n";
         else cout << fixed << setprecision(2) << tySuatLoiNhuan << "% (DANG LO) \n";
