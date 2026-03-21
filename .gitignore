@@ -5,5 +5,18 @@ Debug/
 Release/
 *.user
 
-# Bỏ qua file dữ liệu cá nhân, không cho up lên mạng
-*.csv
+# Bỏ qua file dữ liệu nhạy cảm trong thư mục upload
+data/uploads/**/*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# TaxLens local data (keep knowledge_base samples in repo; ignore uploads & logs)
+data/uploads/
+data/audit_logs/
+data/vector_store/

@@ -1,0 +1,34 @@
+{
+  "case_id": "demo-2025-001",
+  "transaction_id": "V-1001",
+  "flagged": true,
+  "requires_human_review": true,
+  "confidence": 0.72,
+  "reasoning_steps": [
+    "Step 1: Compare invoice vs ledger — invoice total 12,500,000 VND vs GL posting 12,500,000 VND (matched on amount).",
+    "Step 2: Detect mismatch — VAT input on invoice 1,250,000 VND vs VAT declared in return line 900,000 VND (variance 350,000 VND).",
+    "Step 3: Cross-check thresholds — exceeds immateriality threshold configured for this entity (example)."
+  ],
+  "explainability": {
+    "method": "linear_feature_attribution",
+    "top_drivers": [
+      "vat_gap_pct: value=0.2800, weight=0.2500, contribution=0.0700",
+      "amount_z: value=0.3500, weight=0.2500, contribution=0.0875",
+      "ledger_amount_match: value=0.0000, weight=0.2000, contribution=0.0000"
+    ]
+  },
+  "legal_citation": {
+    "text": "Based on Article 3, Clause 2, Circular No. 123/2012/TT-BTC (demo excerpt), taxable price is defined without VAT; VAT deduction requires valid invoices per Article 9 (demo excerpt).",
+    "sources": ["vn_circular_123_2012_vat_example.md"],
+    "insufficient_legal_basis": false
+  },
+  "audit_trail_refs": {
+    "input_redacted": "masked_invoice_and_ledger_refs",
+    "retrieved_chunks": ["vn_circular_123_2012_vat_example.md#article-3"],
+    "model_decision": "flag_for_review_not_final"
+  },
+  "human_approval": {
+    "status": "pending",
+    "note": "AI never makes final compliance decisions; reviewer must confirm."
+  }
+}
