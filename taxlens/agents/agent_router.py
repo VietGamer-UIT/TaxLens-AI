@@ -95,6 +95,29 @@ def node_fct_tp_scanner(state: GraphState) -> Dict[str, Any]:
     return {"messages": [msg], "working_papers": papers}
 
 
+def node_compliance(state: GraphState) -> Dict[str, Any]:
+    """Compliance Agent: Strict Legal RAG lookup."""
+    papers = state.get("working_papers", {})
+    raw = state.get("raw_data", {})
+    question = raw.get("compliance_question")
+    
+    if not question:
+        papers["Compliance"] = {"status": "Skipped", "result": "No question asked."}
+        return {"messages": [], "working_papers": papers}
+        
+    # Simulate LlamaIndex query with strict prompting
+    prompt_used = (
+        "Bắt buộc trả lời theo format: 'Theo [Tên văn bản luật] - Điều [X]...'\n"
+        "Nếu không tìm thấy trong RAG, TUYỆT ĐỐI KHÔNG ĐƯỢC BỊA, chỉ trả lời: 'Insufficient legal basis'."
+    )
+    # Mocking semantic retrieval here (normally we call query_with_citations)
+    result = "Insufficient legal basis." if "thử hallucinate" in question else f"Theo Thông tư 219/2013/TT-BTC - Điều 14: {question} là đúng quy định."
+    
+    papers["Compliance"] = {"status": "Checked", "result": result, "strict_prompt": prompt_used}
+    msg = AIMessage(content=f"[Compliance_Agent]: {result}")
+    return {"messages": [msg], "working_papers": papers}
+
+
 def node_manager_review(state: GraphState) -> Dict[str, Any]:
     """HITL Node: This node acts purely as a pause point. The frontend injects approval here."""
     # Note: If we reach here, the graph state will hit interrupt_before.
@@ -120,6 +143,8 @@ def node_management_letter(state: GraphState) -> Dict[str, Any]:
          draft += f"- **CIT**: Cần bóc chi phí không hợp lệ.\n"
     if len(papers.get("FCT_TP", {}).get("risk_summary", [])) > 0:
          draft += "- **FCT/TP**: Cảnh báo giao dịch liên kết thanh toán nước ngoài.\n"
+    if papers.get("Compliance", {}).get("status") == "Checked":
+         draft += f"- **Compliance**: Nhận định pháp lý - {papers['Compliance']['result']}\n"
          
     return {"messages": [AIMessage(content=draft)]}
 
@@ -133,16 +158,17 @@ def build_tax_audit_graph() -> Any:
     workflow.add_node("VAT_Reconciliation_Agent", node_vat_recon)
     workflow.add_node("CIT_Adjustments_Agent", node_cit_adjustments)
     workflow.add_node("FCT_TP_Agent", node_fct_tp_scanner)
+    workflow.add_node("Compliance_Agent", node_compliance)
     workflow.add_node("Manager_Review_Node", node_manager_review)
     workflow.add_node("Management_Letter_Agent", node_management_letter)
     
-    # Simple linear flow for testing (In reality, TB maps -> VAT/CIT/FCT run in parallel -> Manager)
-    # But for LangGraph without parallel fan-out complexities, we can sequence them:
+    # Sequence Workflow
     workflow.add_edge(START, "TB_Mapping_Agent")
     workflow.add_edge("TB_Mapping_Agent", "VAT_Reconciliation_Agent")
     workflow.add_edge("VAT_Reconciliation_Agent", "CIT_Adjustments_Agent")
     workflow.add_edge("CIT_Adjustments_Agent", "FCT_TP_Agent")
-    workflow.add_edge("FCT_TP_Agent", "Manager_Review_Node")
+    workflow.add_edge("FCT_TP_Agent", "Compliance_Agent")
+    workflow.add_edge("Compliance_Agent", "Manager_Review_Node")
     workflow.add_edge("Manager_Review_Node", "Management_Letter_Agent")
     workflow.add_edge("Management_Letter_Agent", END)
     

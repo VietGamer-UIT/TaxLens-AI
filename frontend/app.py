@@ -1,19 +1,21 @@
 """
 Enterprise Chat UI (Streamlit Layer).
 Handles multi-file uploads, chat, and Strict Human-in-the-loop (Interrupts).
+Premium UI with Tabs, Metrics, and st.status.
 """
 
 import sys
-import os
 from pathlib import Path
+import streamlit as st
+import pandas as pd
 
 # Fix relative imports
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
-import streamlit as st
-import pandas as pd
 from taxlens.agents.agent_router import build_tax_audit_graph
+from taxlens.agents.tools import tool_parse_vn_einvoice_xml
+
 try:
     from langchain_core.messages import HumanMessage
 except ImportError:
@@ -25,112 +27,160 @@ def get_graph():
     return build_tax_audit_graph()
 
 graph = get_graph()
-config = {"configurable": {"thread_id": "audit_engagement_001"}}
+# Thread helps maintain LangGraph Checkpointer state
+config = {"configurable": {"thread_id": "audit_engagement_big4"}}
 
-st.set_page_config(page_title="TaxLens Enterprise", layout="wide", page_icon="⚖️")
+st.set_page_config(page_title="TaxLens Enterprise Workspace", layout="wide", page_icon="⚖️")
 
-# UI: Title
-st.title("TaxLens-AI: Agentic Tax Audit Workspace (Big 4 Standard)")
-
-# Default Raw Data (Pre-configured for demo)
+# Default Session State
 if "raw_data" not in st.session_state:
     st.session_state["raw_data"] = {
-        "gl_vat_total": 1000000,
-        "tax_return_total": 1000000,
-        "einvoice_total": 950000,
+        "gl_vat_total": 0.0,
+        "tax_return_total": 0.0,
+        "einvoice_total": 0.0,
         "sample_expense": 500000,
         "has_valid_invoice": False,
-        "vendor_loc": "Singapore",
-        "is_related_party": True,
-        "foreign_payment": 2000000
+        "vendor_loc": "Vietnam",
+        "is_related_party": False,
+        "foreign_payment": 0.0,
+        "compliance_question": None
     }
-
-# UI: Left Sidebar
-with st.sidebar:
-    st.header("🗂️ Audit Evidence")
-    uploaded_files = st.file_uploader(
-        "Upload Trial Balance / Invoices (CSV/Excel/PDF)", 
-        accept_multiple_files=True
-    )
-    if uploaded_files:
-        st.success(f"Nạp thành công {len(uploaded_files)} tệp chứng từ.")
-        # Render a mock dataframe
-        st.dataframe(pd.DataFrame({"Tài Khoản": ["1331", "3331", "642", "811"], "Dư Nợ": [500, 0, 100, 50], "Dư Có": [0, 500, 0, 0]}))
-
-# Chat History
 if "chat_history" not in st.session_state:
     st.session_state["chat_history"] = []
+if "uploaded_dataframes" not in st.session_state:
+    st.session_state["uploaded_dataframes"] = {}
 
-# Fetch current state from LangGraph Checkpointer
+# --- METRIC SIDEBAR ---
+with st.sidebar:
+    st.header("⚖️ TaxLens Enterprise")
+    st.divider()
+    
+    st.subheader("📊 Audit Overview")
+    metric_col1, metric_col2 = st.columns(2)
+    metric_col1.metric("GL Records", len(st.session_state["uploaded_dataframes"].get("gl", [])))
+    metric_col2.metric("Invoices Processed", "XML" if st.session_state["raw_data"]["einvoice_total"] > 0 else 0)
+    
+    st.divider()
+    st.header("🗂️ Data Ingestion")
+    
+    uploaded_files = st.file_uploader(
+        "Upload GL (Excel/CSV) & e-Invoice (XML)", 
+        accept_multiple_files=True
+    )
+    
+    if uploaded_files:
+        for file in uploaded_files:
+            file_name_lower = file.name.lower()
+            try:
+                if file_name_lower.endswith('.csv'):
+                    df = pd.read_csv(file)
+                    st.session_state["uploaded_dataframes"]["gl"] = df
+                    if 'amount' in df.columns or 'so_tien' in df.columns:
+                        total = df.get('amount', df.get('so_tien')).sum()
+                        st.session_state["raw_data"]["gl_vat_total"] = float(total)
+                    st.success(f"Loaded GL: {file.name}")
+                    
+                elif file_name_lower.endswith(('.xlsx', '.xls')):
+                    df = pd.read_excel(file)
+                    st.session_state["uploaded_dataframes"]["gl"] = df
+                    if 'amount' in df.columns or 'so_tien' in df.columns:
+                        total = df.get('amount', df.get('so_tien')).sum()
+                        st.session_state["raw_data"]["gl_vat_total"] = float(total)
+                    st.success(f"Loaded GL: {file.name}")
+                    
+                elif file_name_lower.endswith('.xml'):
+                    xml_content = file.read().decode('utf-8')
+                    parsed = tool_parse_vn_einvoice_xml(xml_content)
+                    st.session_state["raw_data"]["einvoice_total"] = parsed.get("vat_amount", 0.0)
+                    st.success(f"Parsed XML: {file.name} - VND {parsed.get('vat_amount')}")
+            except Exception as e:
+                st.error(f"Error parsing {file.name}: {e}")
+
+# --- MAIN UI TABS ---
+tab_chat, tab_working_papers, tab_data_explorer = st.tabs(["💬 Workspace Chat", "📄 Working Papers", "🔍 Data Explorer"])
+
+# Read state
 state_info = graph.get_state(config)
 is_interrupted = False
 working_papers = {}
 
 if state_info and state_info.next:
-    # If the graph has a "next" node pending, check if it's halted at Manager_Review_Node
     if "Manager_Review_Node" in state_info.next:
         is_interrupted = True
         if state_info.values and "working_papers" in state_info.values:
              working_papers = state_info.values["working_papers"]
 
-# UI: Chat Container
-chat_container = st.container(height=500)
-with chat_container:
-    # Read messages from LangGraph state directly if exist, otherwise fallback to session
-    if state_info and state_info.values and "messages" in state_info.values:
-        for msg in state_info.values["messages"]:
-            # Basic parsing of Langchain BaseMessage
-            role = "user" if getattr(msg, "type", "ai") == "human" else "assistant"
-            st.chat_message(role).markdown(getattr(msg, "content", str(msg)))
+with tab_data_explorer:
+    st.subheader("Raw Data Tables")
+    if not st.session_state["uploaded_dataframes"]:
+        st.info("No structured data uploaded yet.")
     else:
-        for msg in st.session_state["chat_history"]:
-            st.chat_message(msg["role"]).markdown(msg["content"])
+        for key, df in st.session_state["uploaded_dataframes"].items():
+            st.markdown(f"**{key.upper()}**")
+            st.dataframe(df, use_container_width=True)
 
-# UI: Human-in-the-Loop Checkpoint
-if is_interrupted:
-    st.warning("⚠️ CẢNH BÁO QUẢN LÝ: Các agent đã hoàn thành rà soát. Vui lòng phê duyệt Giấy làm việc (Working Papers) trước khi sinh Báo Cáo.")
-    
-    with st.expander("📄 XEM GIẤY LÀM VIỆC (WORKING PAPERS)", expanded=True):
+with tab_working_papers:
+    st.subheader("Audit Manager Dashboard")
+    if working_papers:
         st.json(working_papers)
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("✅ Phê duyệt & Tiếp tục (Approve)", use_container_width=True, type="primary"):
-            # Provide approval status to state manually
-            graph.update_state(config, {"manager_approval": True})
-            # Resume graph (invoke with None advances past interrupt)
-            graph.invoke(None, config)
-            st.rerun()
-    with col2:
-        if st.button("❌ Từ chối & Hủy (Reject)", use_container_width=True):
-            graph.update_state(config, {"manager_approval": False})
-            graph.invoke(None, config)
-            st.rerun()
+    else:
+        st.info("Agentic fieldwork has not completed yet.")
 
-# UI: Chat Input
-# Disable input if we are waiting for manager approval
-user_input = st.chat_input("Nhập yêu cầu kiểm toán...", disabled=is_interrupted)
-
-if user_input:
-    # Append user question
-    st.session_state["chat_history"].append({"role": "user", "content": user_input})
+with tab_chat:
+    st.title("Fieldwork Orchestration")
     
-    # Initialize the graph
-    initial_state = {
-        "messages": [HumanMessage(content=user_input)], 
-        "raw_data": st.session_state["raw_data"],
-        "working_papers": {},
-        "manager_approval": False
-    }
-    
-    # Execute Graph
-    # If starting fresh, we pass initial state.
-    # We should handle appending to thread or starting a new thread.
-    # For MVP: overwrite current state
-    with st.spinner("AI Agents đang phân tích sổ cái & hóa đơn..."):
-        try:
-             graph.invoke(initial_state, config)
-        except Exception as e:
-             st.chat_message("assistant").error(f"Execution Error: {e}")
-             
-    st.rerun()
+    # Render Chat
+    chat_container = st.container(height=450)
+    with chat_container:
+        if state_info and state_info.values and "messages" in state_info.values:
+            for msg in state_info.values["messages"]:
+                role = "user" if getattr(msg, "type", "ai") == "human" else "assistant"
+                st.chat_message(role).markdown(getattr(msg, "content", str(msg)))
+        else:
+            for msg in st.session_state["chat_history"]:
+                st.chat_message(msg["role"]).markdown(msg["content"])
+                
+    # Human in the loop Checkpoint UI
+    if is_interrupted:
+        st.warning("⚠️ **APPROVAL REQUIRED:** Sếp vui lòng xem 'Working Papers' và bấm quyết định để sinh Management Letter.")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✅ Phê duyệt & Chấp nhận rủi ro", use_container_width=True, type="primary"):
+                with st.status("Đang cập nhật quyết định...", expanded=True) as status:
+                    st.write("Ghi nhận Approval = True")
+                    graph.update_state(config, {"manager_approval": True})
+                    st.write("Đang sinh Báo Cáo Management Letter...")
+                    graph.invoke(None, config)
+                    status.update(label="Hoàn tất phê duyệt!", state="complete", expanded=False)
+                st.rerun()
+        with col2:
+            if st.button("❌ Bác bỏ (Reject)", use_container_width=True):
+                graph.update_state(config, {"manager_approval": False})
+                graph.invoke(None, config)
+                st.rerun()
+                
+    # Input
+    user_input = st.chat_input("Nhắn lệnh kiểm toán hoặc yêu cầu pháp lý (Compliance)...", disabled=is_interrupted)
+    if user_input:
+        st.session_state["chat_history"].append({"role": "user", "content": user_input})
+        st.session_state["raw_data"]["compliance_question"] = user_input
+        
+        initial_state = {
+            "messages": [HumanMessage(content=user_input)], 
+            "raw_data": st.session_state["raw_data"],
+            "working_papers": {},
+            "manager_approval": False
+        }
+        
+        with st.status("🚀 Bắt đầu Fieldwork Orchestration...", expanded=True) as status:
+            st.write("⏳ Gọi TB_Mapping_Agent...")
+            st.write("⏳ Chạy đối soát VAT_Reconciliation_Agent...")
+            st.write("⏳ Check luật (RAG) qua Compliance_Agent...")
+            try:
+                 graph.invoke(initial_state, config)
+                 status.update(label="✅ Hoàn thành Fieldwork, chờ Sếp phê duyệt.", state="complete", expanded=False)
+            except Exception as e:
+                 status.update(label=f"❌ Lỗi: {e}", state="error", expanded=True)
+                 st.chat_message("assistant").error(f"Execution Error: {e}")
+                 
+        st.rerun()

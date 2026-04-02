@@ -1,22 +1,24 @@
-# Bỏ qua các file rác của Visual Studio
+# Enterprise Production Gitignore
 .vs/
 x64/
 Debug/
 Release/
 *.user
 
-# Bỏ qua file dữ liệu nhạy cảm trong thư mục upload
-data/uploads/**/*.csv
+# Security & Secrets
+.env
+secret*.json
+*.db
 
-# Python
+# Python & System
 __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
 venv/
-.env
+.DS_Store
 
-# TaxLens local data (keep knowledge_base samples in repo; ignore uploads & logs)
+# TaxLens local dynamic user data (do not push)
 data/uploads/
-data/audit_logs/
+data/audit_logs/*.jsonl
 data/vector_store/

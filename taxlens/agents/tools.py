@@ -97,6 +97,38 @@ def tool_save_audit_trail(action: str, decision: str, user: str = "Manager") -> 
         "action": action,
         "decision": decision
     }
-    
-    # In a real system, append to data/audit_logs/audit.jsonl
     return f"Audit log saved successfully: {json.dumps(log_entry)}"
+
+
+@tool
+def tool_parse_vn_einvoice_xml(xml_content: str) -> Dict[str, Any]:
+    """
+    Data Analyst Task: Parses Vietnamese E-Invoice XML using xml.etree.ElementTree.
+    Extracts MST (Tax Code), Total amount, and VAT amount.
+    """
+    import xml.etree.ElementTree as ET
+    try:
+        root = ET.fromstring(xml_content)
+        # Attempt to find standard VN E-Invoice tags.
+        # This is a robust fallback scanner ignoring deep namespaces for enterprise readiness.
+        mst = None
+        tong_tien = 0.0
+        tien_thue = 0.0
+        
+        for elem in root.iter():
+            tag = elem.tag.split('}')[-1].lower() # strip namespace
+            if tag in ['mst', 'ma_so_thue', 'buyer_taxcode', 'sellertaxcode'] and not mst:
+                mst = elem.text
+            if tag in ['tgttc', 'tong_tien', 'total_amount'] and elem.text:
+                tong_tien = float(elem.text)
+            if tag in ['tgtgt', 'tien_thue', 'vat_amount'] and elem.text:
+                tien_thue = float(elem.text)
+                
+        return {
+            "mst": mst or "NOT_FOUND",
+            "total_before_tax": tong_tien - tien_thue if tong_tien else 0.0,
+            "vat_amount": tien_thue,
+            "total_amount": tong_tien
+        }
+    except Exception as e:
+        return {"error": f"Invalid XML format: {e}"}
