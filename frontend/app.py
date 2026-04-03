@@ -179,9 +179,10 @@ with tab_chat:
         with st.status("🚀 Bắt đầu Fieldwork Orchestration...", expanded=True) as status:
             st.write("⏳ Gọi TB_Mapping_Agent...")
             st.write("⏳ Chạy đối soát VAT_Reconciliation_Agent...")
-            st.write("⏳ Check luật (RAG) qua Compliance_Agent...")
+            st.write("🌐 Đang kết nối Internet: Tra cứu luật thuế Việt Nam mới nhất...")
             try:
                  graph.invoke(initial_state, config)
+                 st.write("✅ Đã lấy dữ liệu từ Web vào RAM thành công.")
                  status.update(label="✅ Hoàn thành Fieldwork, chờ Sếp phê duyệt.", state="complete", expanded=False)
             except Exception as e:
                  status.update(label=f"❌ Lỗi: {e}", state="error", expanded=True)
