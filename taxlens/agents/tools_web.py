@@ -22,12 +22,12 @@ def tool_live_vietnam_tax_search(query: str) -> Dict[str, Any]:
     try:
         from duckduckgo_search import DDGS
     except ImportError:
-        return {"error": "Missing duckduckgo_search library. Install via pip."}
+        return {"status": "Error", "url": "", "content": "", "error": "Missing duckduckgo_search library. Install via pip."}
         
-    dork_query = f"{query} site:gdt.gov.vn OR site:chinhphu.vn OR site:thuvienphapluat.vn"
+    dork_query = f"{query} luật thuế Việt Nam"
     
     try:
-        # 1. Search with DDG
+        # 1. Search with DDG gracefully
         results = []
         with DDGS() as ddgs:
             # Get top 2 results to avoid rate limit
@@ -35,34 +35,41 @@ def tool_live_vietnam_tax_search(query: str) -> Dict[str, Any]:
             results = list(ddg_gen)
             
         if not results:
-            return {"status": "Không tìm thấy kết quả từ nguồn chính thống.", "data": ""}
+            return {"status": "Không tìm thấy kết quả.", "url": "", "content": "", "error": "Empty search result"}
             
         # 2. Scrape the top URL safely (Zero-Disk Footprint)
-        top_url = results[0].get('href')
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        resp = requests.get(top_url, headers=headers, timeout=10)
+        top_url = results[0].get('href', '')
+        top_snippet = results[0].get('body', '')
         
-        if resp.status_code != 200:
-            return {"status": "Trang web chặn truy cập.", "url": top_url, "snippet": results[0].get('body')}
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+        }
+        
+        content = ""
+        try:
+            resp = requests.get(top_url, headers=headers, timeout=5)
+            if resp.status_code == 200:
+                soup = BeautifulSoup(resp.content, "html.parser")
+                for data in soup(["script", "style", "nav", "footer", "header"]):
+                    data.decompose()
+                text = soup.get_text(separator=' ', strip=True)
+                content = text[:4000]
+        except Exception:
+            pass # We will fallback to snippet
+
+        # Fallback mechanism if requests fail, get blocked, or BS4 extracts nothing
+        if len(content) < 50:
+            content = top_snippet
             
-        soup = BeautifulSoup(resp.content, "html.parser")
-        
-        # Strip scripts and styles
-        for data in soup(["script", "style", "nav", "footer", "header"]):
-            data.decompose()
-            
-        text = soup.get_text(separator=' ', strip=True)
-        
-        # CHOP context to 4000 characters to prevent LLM memory overflow
-        safe_text = text[:4000]
-        
         return {
             "status": "Tra cứu Web thành công",
             "url": top_url,
-            "content": safe_text,
-            "note": "Trả về tối đa 4000 ký tự để trống RAM."
+            "content": content,
+            "error": ""
         }
         
     except Exception as e:
         # Catch RateLimit or other DDG failures gracefully
-        return {"error": f"Lỗi tra cứu web (Thường do RateLimit): {str(e)}"}
+        return {"status": "Error", "url": "", "content": "", "error": f"Lỗi tra cứu web (Thường do RateLimit): {str(e)}"}

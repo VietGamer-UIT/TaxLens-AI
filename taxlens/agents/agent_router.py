@@ -5,6 +5,7 @@ Defines the Big 4 Tax Audit fieldwork flow, terminating at Manager Review before
 
 from typing import Annotated, Dict, Any, List, TypedDict, Sequence
 import operator
+import re
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 try:
@@ -20,6 +21,7 @@ from taxlens.agents.tools import (
     tool_fct_tp_scanner,
     tool_parse_vn_einvoice_xml
 )
+from taxlens.agents.tools_web import tool_live_vietnam_tax_search
 
 # 1. State Definition
 class GraphState(TypedDict):
@@ -27,9 +29,33 @@ class GraphState(TypedDict):
     raw_data: Dict[str, Any]      # Passed from UI (e.g. GL rows, VAT totals)
     working_papers: Dict[str, Any] # Accumulated findings
     manager_approval: bool        # Flag from HITL
+    next_route: str               # Dynamic routing flag
 
 
 # 2. Nodes (The Agents)
+
+def node_supervisor(state: GraphState) -> Dict[str, Any]:
+    """Supervisor Agent: Phân loại Ý định (Intent) của người dùng để quyết định luồng."""
+    messages = state.get("messages", [])
+    if not messages:
+        return {"next_route": "TB_Mapping_Agent"}
+    
+    last_msg = messages[-1].content.lower()
+    
+    # Regex/Keyword logic
+    compliance_keywords = ["thuế", "luật", "bao nhiêu", "quy định", "được không", "?"]
+    audit_keywords = ["kiểm toán", "đối soát", "sổ cái", "hóa đơn", "kiểm tra"]
+    
+    if any(k in last_msg for k in compliance_keywords):
+        route = "Compliance_Agent"
+    elif any(k in last_msg for k in audit_keywords):
+        route = "TB_Mapping_Agent"
+    else:
+        route = "TB_Mapping_Agent" # Default fallback
+        
+    return {"next_route": route}
+
+
 def node_tb_mapping(state: GraphState) -> Dict[str, Any]:
     """Junior Auditor: Maps accounts."""
     papers = state.get("working_papers", {})
@@ -107,23 +133,18 @@ def node_fct_tp_scanner(state: GraphState) -> Dict[str, Any]:
     return {"messages": [msg], "working_papers": papers}
 
 
-from taxlens.agents.tools_web import tool_live_vietnam_tax_search
-import os
-
 def node_compliance(state: GraphState) -> Dict[str, Any]:
     """Compliance Agent: Autonomous Real-time Web RAG."""
     papers = state.get("working_papers", {})
-    raw = state.get("raw_data", {})
-    question = raw.get("compliance_question")
-    api_key = raw.get("api_key", "")
+    messages = state.get("messages", [])
     
-    if not question:
+    if not messages:
         papers["Compliance"] = {"status": "Skipped", "result": "No question asked."}
         return {"messages": [], "working_papers": papers}
 
+    question = messages[-1].content
+
     # Autonomous Tool Call Simulation (Without imposing heavy API crashes)
-    # Using the tool explicitly here to guarantee it functions within Streamlit!
-    # In a full LangChain agent: llm.bind_tools([tool_live_vietnam_tax_search])
     sys_prompt = (
         "Nếu câu hỏi liên quan đến luật lệ mới nhất, năm hiện tại (2025/2026), "
         "hoặc kiến thức nội bộ không đủ -> TỰ ĐỘNG gọi tool search mạng. "
@@ -133,17 +154,40 @@ def node_compliance(state: GraphState) -> Dict[str, Any]:
     # We call the tool natively so the UI can display the status accurately
     try:
          web_data = tool_live_vietnam_tax_search.invoke({"query": question})
-         if "error" in web_data:
-              result = f"Insufficient legal basis. Error: {web_data['error']}"
+         content = web_data.get("content", "")
+         
+         if not content or len(content) < 10 or web_data.get("status") == "Error":
+              # Fallback directly to LLM if blocked
+              try:
+                  from langchain_openai import ChatOpenAI
+                  from langchain_core.messages import SystemMessage, HumanMessage
+                  llm = ChatOpenAI(model="gpt-3.5-turbo", api_key="placeholder") # Localhost user bypass
+                  fallback_ans = llm.invoke([
+                      SystemMessage(content="Bạn là trợ lý thuế VN."), 
+                      HumanMessage(content=question)
+                  ]).content
+              except Exception:
+                  fallback_ans = "Vui lòng nhập API Key để dùng LLM dự phòng."
+                  
+              result = f"Hệ thống bị tường lửa chặn / Lỗi mạng, không thể tra cứu. Đây là câu trả lời dựa trên kiến thức gốc: {fallback_ans}"
          else:
+              # DO REAL LLM INFERENCE summarizing the prompt
+              try:
+                  from langchain_openai import ChatOpenAI
+                  from langchain_core.messages import HumanMessage
+                  llm = ChatOpenAI(model="gpt-3.5-turbo", api_key="placeholder") 
+                  prompt_text = f"Dựa trên nội dung web official này:\n{content[:3000]}\n\nHãy tóm tắt và trả lời câu hỏi: {question}"
+                  analysis = llm.invoke([HumanMessage(content=prompt_text)]).content
+              except Exception as e:
+                  analysis = "(Lỗi kết nối OpenAI do thiếu API Key hoặc Auth, tóm tắt tự động bị hủy)"
+                  
               result = (
-                  f"Theo [Cổng Truyền Thông Chính Phủ] - Nguồn: {web_data.get('url', 'N/A')}\n\n"
-                  f"Tóm tắt luật mạng: Trích xuất thành công {len(web_data.get('content', ''))} ký tự. \n"
-                  f"Phân tích LLM Cloud (Mô phỏng): Dựa trên dữ liệu mạng vừa nạp trực tiếp vào RAM, {question} "
-                  f"là có rủi ro nếu không có hóa đơn chứng từ."
+                  f"Theo {web_data.get('url', 'N/A')}...\n"
+                  f"Trích xuất {len(content)} ký tự.\n\n"
+                  f"Phân tích LLM:\n{analysis}"
               )
     except Exception as e:
-         result = f"Insufficient legal basis. Web RAG failed: {e}"
+         result = f"Hệ thống bị lỗi mạng, không thể tra cứu: {e}"
     
     papers["Compliance"] = {"status": "Checked", "result": result, "strict_prompt": sys_prompt}
     msg = AIMessage(content=f"[Compliance_Agent]: {result}")
@@ -152,8 +196,6 @@ def node_compliance(state: GraphState) -> Dict[str, Any]:
 
 def node_manager_review(state: GraphState) -> Dict[str, Any]:
     """HITL Node: This node acts purely as a pause point. The frontend injects approval here."""
-    # Note: If we reach here, the graph state will hit interrupt_before.
-    # When resumed, state["manager_approval"] should be set by the UI.
     approval = state.get("manager_approval", False)
     text = "Manager APPROVED working papers." if approval else "Manager REJECTED/Needs changes."
     return {"messages": [AIMessage(content=f"[Manager]: {text}")]}
@@ -181,11 +223,18 @@ def node_management_letter(state: GraphState) -> Dict[str, Any]:
     return {"messages": [AIMessage(content=draft)]}
 
 
-# 3. Build Graph
+# 3. Dynamic Routing Edge
+def routing_function(state: GraphState) -> str:
+    """Read the routing flag set by supervisor."""
+    return state.get("next_route", "TB_Mapping_Agent")
+
+
+# 4. Build Graph
 def build_tax_audit_graph() -> Any:
     workflow = StateGraph(GraphState)
     
     # Add nodes
+    workflow.add_node("Supervisor_Node", node_supervisor)
     workflow.add_node("TB_Mapping_Agent", node_tb_mapping)
     workflow.add_node("VAT_Reconciliation_Agent", node_vat_recon)
     workflow.add_node("CIT_Adjustments_Agent", node_cit_adjustments)
@@ -194,15 +243,29 @@ def build_tax_audit_graph() -> Any:
     workflow.add_node("Manager_Review_Node", node_manager_review)
     workflow.add_node("Management_Letter_Agent", node_management_letter)
     
-    # Sequence Workflow
-    workflow.add_edge(START, "TB_Mapping_Agent")
+    # Edge: Start to Supervisor
+    workflow.add_edge(START, "Supervisor_Node")
+    
+    # Conditional Edges from Supervisor
+    workflow.add_conditional_edges(
+        "Supervisor_Node", 
+        routing_function,
+        {
+            "Compliance_Agent": "Compliance_Agent",
+            "TB_Mapping_Agent": "TB_Mapping_Agent"
+        }
+    )
+    
+    # Audit Branch Pattern
     workflow.add_edge("TB_Mapping_Agent", "VAT_Reconciliation_Agent")
     workflow.add_edge("VAT_Reconciliation_Agent", "CIT_Adjustments_Agent")
     workflow.add_edge("CIT_Adjustments_Agent", "FCT_TP_Agent")
-    workflow.add_edge("FCT_TP_Agent", "Compliance_Agent")
-    workflow.add_edge("Compliance_Agent", "Manager_Review_Node")
+    workflow.add_edge("FCT_TP_Agent", "Manager_Review_Node")
     workflow.add_edge("Manager_Review_Node", "Management_Letter_Agent")
     workflow.add_edge("Management_Letter_Agent", END)
+    
+    # Compliance Branch Pattern (Q&A Direct Response)
+    workflow.add_edge("Compliance_Agent", END)
     
     # Initialize checkpointer
     memory = MemorySaver()
