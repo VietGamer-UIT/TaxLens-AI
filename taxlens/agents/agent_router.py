@@ -76,28 +76,43 @@ def node_oracle_agent(state: GraphState) -> Dict[str, Any]:
          content = web_data.get("content", "")
          
          if not content or len(content) < 10 or web_data.get("status") == "Error":
-              # FALLBACK: Nếu rớt mạng, dùng Llama 3 Local trả lời kiến thức gốc
-              from langchain_community.chat_models import ChatOllama
-              from langchain_core.messages import SystemMessage, HumanMessage
-              
-              llm = ChatOllama(model="llama3", temperature=0) # Dùng 100% Ollama Local
-              fallback = llm.invoke([
-                  SystemMessage(content="Bạn là chuyên gia thuế VN."), 
-                  HumanMessage(content=question)
-              ]).content
-              
-              result = f"Stealth RAG bị tường lửa chặn. Trả lời từ Não bộ Local LLM:\n\n{fallback}"
+              # FALLBACK: Nếu rớt mạng, dùng Gemini trả lời kiến thức gốc
+              try:
+                  from langchain_google_genai import ChatGoogleGenerativeAI
+                  from langchain_core.messages import SystemMessage, HumanMessage
+                  from dotenv import load_dotenv
+                  import os
+                  
+                  load_dotenv() # Load API Key từ .env tự động
+                  
+                  # Khởi tạo Gemini 1.5 Flash an toàn
+                  llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0) 
+                  fallback = llm.invoke([
+                      SystemMessage(content="Bạn là chuyên gia thuế VN."), 
+                      HumanMessage(content=question)
+                  ]).content
+                  
+                  result = f"Stealth RAG chiến lược bị chặn. Trả lời từ Não bộ căn bản Gemini:\n\n{fallback}"
+              except Exception as e:
+                  result = f"Lỗi khởi tạo Gemini (Hãy chắc chắn đã cấu hình GOOGLE_API_KEY trong .env): {e}"
          else:
-              # THÀNH CÔNG: Lấy luật cào được cho Llama 3 tóm tắt
-              from langchain_community.chat_models import ChatOllama
-              from langchain_core.messages import HumanMessage
-              
-              llm = ChatOllama(model="llama3", temperature=0) # Dùng 100% Ollama Local
-              prompt = f"Dựa vào Trích đoạn Luật Việt Nam sau:\n{content[:4000]}\n\nHãy trả lời câu hỏi: {question}"
-              analysis = llm.invoke([HumanMessage(content=prompt)]).content
-              
-              result = f"🔗 **Nguồn**: {web_data.get('url', 'N/A')}\n\n**Oracle Llama3 Analysis**:\n{analysis}"
-              
+              # THÀNH CÔNG: Lấy luật cào được cho Gemini tóm tắt
+              try:
+                  from langchain_google_genai import ChatGoogleGenerativeAI
+                  from langchain_core.messages import HumanMessage
+                  from dotenv import load_dotenv
+                  import os
+                  
+                  load_dotenv()
+                  
+                  llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
+                  prompt = f"Dựa vào Trích đoạn Luật Việt Nam sau:\n{content[:4000]}\n\nHãy trả lời câu hỏi: {question}"
+                  analysis = llm.invoke([HumanMessage(content=prompt)]).content
+                  
+                  result = f"🔗 **Nguồn**: {web_data.get('url', 'N/A')}\n\n**Oracle Gemini Analysis**:\n{analysis}"
+              except Exception as e:
+                  result = f"🔗 **Nguồn RAG**: {web_data.get('url', 'N/A')}\n(Lỗi gọi API tóm tắt Gemini: {e})"
+                  
     except Exception as e:
          result = f"Oracle RAG Lỗi: {e}"
          
