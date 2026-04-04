@@ -6,72 +6,62 @@ from datetime import datetime, timedelta
 def generate_mock_data():
     os.makedirs("sample_data", exist_ok=True)
     
-    # --- 1. SINH 1000 DÒNG SỔ CÁI BẰNG PANDAS ---
+    # Danh sách Tổ chức truyền nhận (TCTN) Hợp Lệ
+    VALID_TCTN = ["Viettel", "VNPT", "MobiFone", "FPT", "BKAV", "MISA", "Thái Sơn", "TS24", "CyberLotus"]
+    FAKE_TCTN = ["PhanMemHoaDonGia", "TaxCloneApp", "UnregisteredSoft", "SuperInvoicePro"]
+    
     data = []
     base_date = datetime(2026, 1, 1)
     
-    for i in range(1000):
-        # Ngày ngẫu nhiên trong năm 2026
+    for i in range(1, 5001):
         ngay = base_date + timedelta(days=random.randint(0, 360))
         ngay_str = ngay.strftime("%d/%m/%Y")
         
-        # Quyết định dòng này có phải là vi phạm (5% chance)
-        is_violation = random.random() < 0.05
-        
-        if is_violation:
-            # Sinh dữ liệu rủi ro: Chi phí cực lớn nhưng thiếu chứng từ (TK 642)
-            tai_khoan = "642"
-            so_tien = random.randint(50000000, 200000000)
-            dien_giai = "Chi phí hoa hồng môi giới (Không hợp lệ)"
-            chung_tu = False
+        # Random probabilities cho 4 Multi-class Labels
+        rand = random.random()
+        if rand < 0.85:
+            risk_label = "CLASS_0_SAFE"
+        elif rand < 0.90:
+            risk_label = "CLASS_1_VAT_LEAK"
+        elif rand < 0.95:
+            risk_label = "CLASS_2_FAKE_INVOICE"
         else:
-            # Dữ liệu 정상 (Normal)
-            tai_khoan = random.choice(["111", "112", "152", "156", "331", "511", "641", "642", "1331"])
-            so_tien = random.randint(1000000, 15000000)
-            dien_giai = f"Giao dịch hợp lệ {i}"
-            chung_tu = True
+            risk_label = "CLASS_3_CIT_REJECT"
+            
+        # Default Normal Transaction
+        nha_cung_cap = random.choice(VALID_TCTN)
+        ma_so_thue = f"{random.randint(1000000000, 9999999999)}"
+        so_tien = random.randint(1000000, 20000000)
+        tien_thue = so_tien * 0.10
+        tai_khoan = random.choice(["111", "112", "152", "156", "331", "511", "1331"])
+        chung_tu = True
+        
+        # Inject Risk Properties based on Class
+        if risk_label == "CLASS_1_VAT_LEAK":
+            tai_khoan = "1331"
+            tien_thue = so_tien * random.choice([0.05, 0.08, 0.12]) # Độ lệch VAT bất thường (VD: 5%, 8%, 12%)
+        elif risk_label == "CLASS_2_FAKE_INVOICE":
+            nha_cung_cap = random.choice(FAKE_TCTN)
+        elif risk_label == "CLASS_3_CIT_REJECT":
+            tai_khoan = "642"
+            so_tien = random.randint(25000000, 100000000) # Số tiền cực lớn
+            chung_tu = False # Không có chứng từ
             
         data.append({
+            "Transaction_ID": f"TX_{i}",
             "NgayGhiSo": ngay_str,
-            "DienGiai": dien_giai,
             "TaiKhoan": tai_khoan,
+            "MaSoThue": ma_so_thue,
+            "NhaCungCap_HDDT": nha_cung_cap,
             "SoTien": so_tien,
-            "ChungTuHopLe": chung_tu
+            "TienThue": tien_thue,
+            "ChungTuHopLe": chung_tu,
+            "Risk_Label_True": risk_label # Cột chân lý để Machine Learning đối chiếu (Agent sẽ tự dự đoán mà không nhìn cờ này)
         })
         
     df = pd.DataFrame(data)
-    df.to_csv("sample_data/so_cai_1000_dong.csv", index=False, encoding="utf-8-sig")
-    
-    # --- 2. SINH 5 FILE XML (2 LỖI) ---
-    for i in range(1, 6):
-        is_xml_error = (i > 3) # File 4 và 5 bị lỗi
-        tien_chua_thue = 20000000
-        tien_thue_dung = 2000000
-        
-        if is_xml_error:
-            # Lỗi cố tình: Viết sai tiền thuế (cao hơn thực tế)
-            tien_thue = 2500000 
-            ghi_chu = "<!-- CẢNH BÁO LỖI: Thuế suất 10% nhưng tiền thuế ghi 2.5tr -->"
-        else:
-            tien_thue = tien_thue_dung
-            ghi_chu = ""
-            
-        xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
-<HDon>
-    <DLHDon>
-        <NDHDon>
-            <TienChuaThue>{tien_chua_thue}</TienChuaThue>
-            <ThueSuat>10</ThueSuat>
-            {ghi_chu}
-            <TienThue>{tien_thue}</TienThue>
-        </NDHDon>
-    </DLHDon>
-</HDon>
-"""
-        with open(f"sample_data/hoa_don_{i}.xml", "w", encoding="utf-8") as f:
-            f.write(xml_content)
-            
-    print(f"[SUCCESS] Đã sinh thành công so_cai_1000_dong.csv ({len(df)} dòng) và 5 file XML chứa lỗi rải rác.")
+    df.to_csv("sample_data/dataset_5000_audit.csv", index=False, encoding="utf-8-sig")
+    print(f"[SUCCESS] Đã sinh xong Dataset Machine Learning: dataset_5000_audit.csv ({len(df)} dòng, 8 features, 4 multi-class labels).")
 
 if __name__ == "__main__":
     generate_mock_data()
