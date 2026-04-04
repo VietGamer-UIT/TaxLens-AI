@@ -37,9 +37,12 @@ def tool_live_vietnam_tax_search(query: str) -> Dict[str, Any]:
     Oracle Agent Task: Tra cứu trực tiếp luật thuế Việt Nam trên web.
     """
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
     except ImportError:
-        return {"status": "Error", "url": "", "content": "", "error": "Missing duckduckgo_search library."}
+        try:
+            from duckduckgo_search import DDGS
+        except ImportError:
+            return {"status": "Error", "url": "", "content": "", "error": "Missing ddgs library."}
         
     dork_query = f"{query} luật thuế Việt Nam site:gov.vn OR site:chinhphu.vn OR site:thuvienphapluat.vn"
     
