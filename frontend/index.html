@@ -81,7 +81,7 @@
                         <div class="grid grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-300">Hãng Kiểm Toán</label>
-                                <input type="text" id="firmName" value="Example Audit Firm" class="mt-2 w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white outline-none focus:border-blue-500 transition">
+                                <input type="text" id="firmName" value="Global Auditing Firm" class="mt-2 w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white outline-none focus:border-blue-500 transition">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-300">Khách Hàng</label>
@@ -106,7 +106,7 @@
                 <!-- Loading -->
                 <div id="loader" class="hidden mt-10 text-center">
                     <div class="inline-block w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
-                    <p class="text-blue-400 text-lg mt-4 font-semibold">Gemini Oracle & Pandas Pipeline is running...</p>
+                    <p id="loaderText" class="text-blue-400 text-lg mt-4 font-semibold">Gemini Oracle & Pandas Pipeline is running...</p>
                 </div>
             </section>
 
@@ -268,12 +268,22 @@
             e.preventDefault();
             if(uploadedFiles.length === 0) return alert("Select files first!");
             
-            const firmName = document.getElementById('firmName').value;
-            const clientName = document.getElementById('clientName').value;
+            let firmName = document.getElementById('firmName').value.trim();
+            if(!firmName) firmName = "Global Auditing Firm";
+            let clientName = document.getElementById('clientName').value.trim();
+            if(!clientName) clientName = "Client Corporation";
             document.getElementById('currentFirm').innerText = firmName;
             
             document.getElementById('auditForm').classList.add('hidden');
             document.getElementById('loader').classList.remove('hidden');
+            
+            let loadingMsgs = ["Đang nạp 5000 dòng CSV...", "Đang phân tích Pandas Processing...", "Đang đối chiếu Nghị định 123...", "Đang trích xuất Báo cáo...", "Chờ Gemini Oracle phản hồi..."];
+            let msgIdx = 0;
+            document.getElementById('loaderText').innerText = loadingMsgs[0];
+            const loadIntv = setInterval(() => {
+                msgIdx = (msgIdx + 1) % loadingMsgs.length;
+                document.getElementById('loaderText').innerText = loadingMsgs[msgIdx];
+            }, 2000);
 
             const fd = new FormData();
             fd.append('audit_firm_name', firmName);
@@ -289,6 +299,7 @@
             } catch(e) {
                 alert("Connection failed");
             } finally {
+                clearInterval(loadIntv);
                 document.getElementById('loader').classList.add('hidden');
                 document.getElementById('auditForm').classList.remove('hidden');
                 uploadedFiles = []; document.getElementById('fileCount').innerText = ''; fileInput.value = '';

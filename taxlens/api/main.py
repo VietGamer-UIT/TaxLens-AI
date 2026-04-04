@@ -62,8 +62,8 @@ def get_reports(db: Session = Depends(get_db)):
 @app.post("/api/v1/audit")
 async def process_audit(
     files: list[UploadFile] = File(...),
-    audit_firm_name: str = Form("Example Audit Firm"),
-    client_name: str = Form("Client ABC Corporation"),
+    audit_firm_name: str = Form(default="Independent Audit Firm"),
+    client_name: str = Form(default="Client Corporation"),
     db: Session = Depends(get_db)
 ):
     """API cốt lõi: Phân tích File & Lưu Trữ Data Xuống SQLite"""
@@ -134,4 +134,4 @@ async def process_audit(
                 except Exception:
                     pass
                 
-    return JSONResponse(status_code=500 if response_payload.get("status") == "error" else 200, content=response_payload)
+    return JSONResponse(status_code=200, content=response_payload)

@@ -42,6 +42,8 @@ def node_hunter_agent(state: GraphState) -> Dict[str, Any]:
     
     prefix = f"Re-run Requested: '{review_note}'. " if review_note and not state.get("is_approved", True) else ""
     findings = []
+    import time
+    start_time = time.time()
     
     try:
         count_rows = 0
@@ -97,8 +99,9 @@ def node_hunter_agent(state: GraphState) -> Dict[str, Any]:
          findings.append({"Class_Risk": "SYS_ERR", "Mã rủi ro": "FATAL_PANDAS", "Khoản mục": "Data Pipeline", "Số tiền chênh lệch": "0", "Cơ sở pháp lý": "N/A", "Đề xuất": f"Lỗi đọc Data: {e}"})
          count_rows = 0
          
+    process_time = (time.time() - start_time) * 1000
     papers["standardized_findings"] = findings
-    msg_content = f"[Hunter Agent]: {prefix}Quét Model hoàn tất. Xử lý {count_rows} dóng dữ liệu. Found {len(findings)} Anomalies."
+    msg_content = f"[Hunter Agent]: {prefix}Quét Model hoàn tất. Xử lý {count_rows} dòng dữ liệu trong {process_time:.2f}ms. Found {len(findings)} Anomalies."
     return {"messages": [AIMessage(content=msg_content)], "working_papers": papers}
 
 def node_oracle_agent(state: GraphState) -> Dict[str, Any]:
