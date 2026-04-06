@@ -1,450 +1,664 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="vi" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TaxLens Enterprise SaaS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: { extend: { colors: { gray: { 900: '#111827', 800: '#1f2937', 700: '#374151' } } } }
-        }
-    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaxLens-AI — Forensic Tax Audit Platform</title>
+  <meta name="description" content="Hệ thống kiểm toán thuế pháp y AI — đa định dạng CSV, XML, PDF, Excel, hình ảnh.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { brand: { 500: '#6366f1', 600: '#4f46e5' } } } }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    * { font-family: 'Inter', sans-serif; }
+    .fade-in { animation: fadeIn .3s ease-out; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .nav-active { background: rgba(99,102,241,.18); color: #a5b4fc; }
+    .nav-inactive { color: #9ca3af; }
+    .nav-inactive:hover { background: rgba(255,255,255,.06); color: #f3f4f6; }
+    .badge-core { background:#16a34a22; color:#4ade80; border:1px solid #16a34a55; padding:2px 7px; border-radius:99px; font-size:10px; font-weight:700; }
+    .badge-pro  { background:#2563eb22; color:#60a5fa; border:1px solid #2563eb55; padding:2px 7px; border-radius:99px; font-size:10px; font-weight:700; }
+    .badge-ent  { background:#7c3aed22; color:#c084fc; border:1px solid #7c3aed55; padding:2px 7px; border-radius:99px; font-size:10px; font-weight:700; }
+    .file-chip  { display:inline-flex; align-items:center; gap:5px; background:#1e293b; border:1px solid #334155; border-radius:6px; padding:4px 10px; font-size:12px; }
+    .progress-bar { height:6px; background:#1e293b; border-radius:99px; overflow:hidden; }
+    .progress-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,#6366f1,#a855f7); transition:width .5s ease; }
+    .tier-section { border-left:3px solid; padding-left:12px; margin:6px 0; }
+    .tier-core { border-color:#16a34a; }
+    .tier-pro  { border-color:#2563eb; }
+    .tier-ent  { border-color:#7c3aed; }
+    ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-track { background:#111827; } ::-webkit-scrollbar-thumb { background:#374151; border-radius:3px; }
+  </style>
 </head>
-<body class="bg-gray-900 text-white font-sans overflow-hidden flex h-screen">
+<body class="bg-gray-900 text-white overflow-hidden flex h-screen">
 
-    <!-- Sidebar -->
-    <aside class="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
-        <div class="h-16 flex items-center px-6 border-b border-gray-700">
-            <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">🏢 TaxLens-AI</h1>
+<!-- ──────────── SIDEBAR ──────────── -->
+<aside class="w-64 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0">
+  <div class="h-16 flex items-center px-6 border-b border-gray-700 gap-3">
+    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold">T</div>
+    <div>
+      <h1 class="text-sm font-bold text-white leading-tight">TaxLens-AI</h1>
+      <p class="text-[10px] text-gray-400">Forensic Audit Platform</p>
+    </div>
+  </div>
+
+  <nav class="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
+    <p class="text-[10px] text-gray-500 uppercase tracking-widest px-2 mb-2">Menu</p>
+
+    <a href="#" onclick="switchTab('dashboard')" id="nav-dashboard"
+       class="nav-item nav-active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
+      <i class="fas fa-chart-pie w-4 text-center"></i> Dashboard
+    </a>
+    <a href="#" onclick="switchTab('audit')" id="nav-audit"
+       class="nav-item nav-inactive flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
+      <i class="fas fa-search-dollar w-4 text-center"></i> Kiểm Toán Mới
+    </a>
+    <a href="#" onclick="switchTab('history')" id="nav-history"
+       class="nav-item nav-inactive flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
+      <i class="fas fa-folder-open w-4 text-center"></i> Lịch Sử Báo Cáo
+    </a>
+
+    <div class="pt-4">
+      <p class="text-[10px] text-gray-500 uppercase tracking-widest px-2 mb-2">Tính năng</p>
+      <div class="space-y-2 px-2 text-xs text-gray-400">
+        <div class="tier-section tier-core">
+          <span class="badge-core">CORE · FREE</span>
+          <p class="mt-1">6 Rule-Based Validators</p>
+          <p class="text-gray-500">MST · KyHieu · VAT Drift · CIT</p>
         </div>
-        <nav class="flex-1 px-4 py-6 space-y-2">
-            <a href="#" onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex items-center gap-3 px-4 py-3 bg-blue-600/20 text-blue-400 rounded-lg font-medium transition"><i class="fas fa-chart-pie"></i> Dashboard</a>
-            <a href="#" onclick="switchTab('audit')" id="nav-audit" class="nav-btn flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-700 hover:text-white rounded-lg font-medium transition"><i class="fas fa-search-dollar"></i> New Audit</a>
-            <a href="#" onclick="switchTab('history')" id="nav-history" class="nav-btn flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-700 hover:text-white rounded-lg font-medium transition"><i class="fas fa-folder-open"></i> Report History</a>
-            <a href="#" onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-700 hover:text-white rounded-lg font-medium transition"><i class="fas fa-cog"></i> Settings</a>
-        </nav>
-        <div class="p-4 border-t border-gray-700 text-center">
-            <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Phát triển bởi</p>
-            <p class="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mt-1">Đoàn Hoàng Việt</p>
-            <p class="text-xs text-gray-500">(Việt Gamer)</p>
+        <div class="tier-section tier-pro">
+          <span class="badge-pro">PRO · API KEY</span>
+          <p class="mt-1">Tax Oracle — Gemini Flash/Pro</p>
+          <p class="text-gray-500">Phân tích pháp lý sâu · Batch LLM</p>
         </div>
-    </aside>
-
-    <!-- Main Content -->
-    <div class="flex-1 flex flex-col h-screen overflow-hidden">
-        <!-- Topbar -->
-        <header class="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-8">
-            <h2 id="top-title" class="text-lg font-semibold text-gray-200">Executive Dashboard</h2>
-            <div class="flex items-center gap-4">
-                <span class="text-sm font-medium text-gray-300">Tenant: <b class="text-blue-400" id="currentFirm">Example Audit Firm</b></span>
-                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center font-bold shadow-lg">VG</div>
-            </div>
-        </header>
-
-        <!-- Pages Setup -->
-        <main class="flex-1 overflow-y-auto p-8 bg-gray-900 scroll-smooth">
-            
-            <!-- SECTION: Dashboard -->
-            <section id="page-dashboard" class="block animate-fade-in">
-                <h3 class="text-2xl font-bold mb-6">Welcome back, Admin</h3>
-                <div class="grid grid-cols-4 gap-6 mb-8">
-                    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
-                        <p class="text-gray-400 text-sm font-semibold">Total Audits</p>
-                        <h4 class="text-3xl font-bold text-white mt-2" id="db-total-audits">--</h4>
-                    </div>
-                    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg border-l-4 border-l-red-500">
-                        <p class="text-gray-400 text-sm font-semibold">VAT Anomalies</p>
-                        <h4 class="text-3xl font-bold text-white mt-2" id="db-vat-errors">--</h4>
-                    </div>
-                    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg border-l-4 border-l-yellow-500">
-                        <p class="text-gray-400 text-sm font-semibold">CIT / Fake Inv.</p>
-                        <h4 class="text-3xl font-bold text-white mt-2" id="db-cit-errors">--</h4>
-                    </div>
-                    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg border-l-4 border-l-blue-500">
-                        <p class="text-gray-400 text-sm font-semibold">Safe Records</p>
-                        <h4 class="text-3xl font-bold text-white mt-2" id="db-safe-records">--</h4>
-                    </div>
-                </div>
-                
-                <!-- Biểu đồ -->
-                <div class="grid grid-cols-2 gap-6 mb-8">
-                    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
-                        <h4 class="text-lg font-bold mb-4 text-gray-300">Tỷ lệ các loại Rủi ro</h4>
-                        <div class="relative h-64 w-full">
-                            <canvas id="riskPieChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
-                        <h4 class="text-lg font-bold mb-4 text-gray-300">Biến động Số tiền theo loại lỗi</h4>
-                        <div class="relative h-64 w-full">
-                            <canvas id="riskBarChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg flex justify-between items-center">
-                    <div>
-                        <h4 class="text-lg font-bold mb-1">Quick Actions</h4>
-                        <p class="text-gray-400 text-sm">Chạy báo cáo kiểm toán mới từ file CSV/XML</p>
-                    </div>
-                    <button onclick="switchTab('audit')" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-medium transition shadow-md">Run New Data Pipeline</button>
-                </div>
-            </section>
-
-            <!-- SECTION: New Audit -->
-            <section id="page-audit" class="hidden animate-fade-in max-w-4xl mx-auto">
-                <div class="bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-700">
-                    <h3 class="text-2xl font-bold mb-6 text-blue-400 border-b border-gray-700 pb-4">Start Fieldwork Pipeline</h3>
-                    <form id="auditForm" class="space-y-6">
-                        <div class="grid grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-300">Hãng Kiểm Toán</label>
-                                <input type="text" id="firmName" value="Global Auditing Firm" class="mt-2 w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white outline-none focus:border-blue-500 transition">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-300">Khách Hàng</label>
-                                <input type="text" id="clientName" value="Client ABC Corporation" class="mt-2 w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white outline-none focus:border-blue-500 transition">
-                            </div>
-                        </div>
-
-                        <!-- Drag & Drop -->
-                        <div id="dropzone" class="border-2 border-dashed border-gray-600 rounded-xl p-10 text-center hover:border-blue-500 transition bg-gray-900/50 cursor-pointer">
-                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
-                            <p class="text-gray-300">Kéo thả CSV/XML (5000+ dòng) hoặc click chọn</p>
-                            <input type="file" id="fileInput" multiple class="hidden">
-                            <p id="fileCount" class="text-sm text-blue-400 font-bold mt-2"></p>
-                        </div>
-
-                        <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 text-white font-bold py-4 rounded-lg shadow-xl shadow-blue-900/20 transition-all active:scale-95">
-                            <i class="fas fa-brain mr-2"></i> EXECUTE MULTI-CLASS AI PIPELINE
-                        </button>
-                    </form>
-                </div>
-                
-                <!-- Loading -->
-                <div id="loader" class="hidden mt-10 text-center">
-                    <div class="inline-block w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
-                    <p id="loaderText" class="text-blue-400 text-lg mt-4 font-semibold">Gemini Oracle & Pandas Pipeline is running...</p>
-                </div>
-            </section>
-
-            <!-- SECTION: Audit Results (Shown after POST) -->
-            <section id="page-results" class="hidden animate-fade-in space-y-6">
-                <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-4">
-                    <h3 class="text-2xl font-bold text-white">Báo Cáo Rủi Ro <span id="res-client" class="text-blue-400"></span></h3>
-                    <button onclick="switchTab('history')" class="text-gray-400 hover:text-white underline text-sm">View in History</button>
-                </div>
-                
-                <div class="bg-gray-800 rounded-xl shadow-2xl border border-gray-700 overflow-hidden">
-                    <div class="p-4 bg-gray-900/50 border-b border-gray-700"><h4 class="font-bold text-red-400">Working Papers (Data DB)</h4></div>
-                    <div class="overflow-x-auto overflow-y-auto" style="max-height: 600px;">
-                        <table class="w-full text-left text-sm text-gray-300">
-                            <thead class="text-xs uppercase bg-gray-900 text-gray-400 sticky top-0">
-                                <tr>
-                                    <th class="px-6 py-3 whitespace-nowrap">Risk Class</th>
-                                    <th class="px-6 py-3 whitespace-nowrap">Mã Lỗi</th>
-                                    <th class="px-6 py-3">Khoản Mục</th>
-                                    <th class="px-6 py-3 whitespace-nowrap">Chênh Lệch</th>
-                                    <th class="px-6 py-3 min-w-[250px]">Đề Xuất</th>
-                                </tr>
-                            </thead>
-                            <tbody id="riskTable" class="divide-y divide-gray-700"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-700 prose prose-invert max-w-none">
-                    <h4 class="text-blue-400 font-bold border-b border-gray-700 pb-2 mb-4">Management Letter</h4>
-                    <div id="markdownReport"></div>
-                </div>
-            </section>
-
-            <!-- SECTION: Settings -->
-            <section id="page-settings" class="hidden animate-fade-in max-w-2xl mx-auto">
-                <div class="bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-700">
-                    <h3 class="text-2xl font-bold mb-6 text-blue-400 border-b border-gray-700 pb-4">System Settings</h3>
-                    <div class="space-y-6">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-300 mb-2">Google Gemini API Key</label>
-                            <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white outline-none focus:border-blue-500 transition">
-                            <p class="text-xs text-gray-500 mt-2">Được lưu trực tiếp trong trình duyệt bằng localStorage, không gửi lên server trừ khi chạy Audit Pipeline.</p>
-                        </div>
-                        <button onclick="saveSettings()" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-medium transition shadow-md">Lưu Cấu Hình</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- SECTION: History -->
-            <section id="page-history" class="hidden animate-fade-in">
-                <h3 class="text-2xl font-bold mb-6 border-b border-gray-700 pb-4">Audit Database Logs</h3>
-                <div class="bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden">
-                    <table class="w-full text-left text-sm text-gray-300">
-                        <thead class="text-xs uppercase bg-gray-900 text-gray-400">
-                            <tr>
-                                <th class="px-6 py-4">ID</th>
-                                <th class="px-6 py-4">Client</th>
-                                <th class="px-6 py-4">Timestamp</th>
-                                <th class="px-6 py-4">Tenant Firm</th>
-                                <th class="px-6 py-4">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="historyTable" class="divide-y divide-gray-700">
-                            <tr><td colspan="5" class="py-10 text-center text-gray-500">Loading History...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        </main>
+        <div class="tier-section tier-ent">
+          <span class="badge-ent">ENTERPRISE</span>
+          <p class="mt-1">Management Letter (ISA 265)</p>
+          <p class="text-gray-500">HitL Review · Multi-format · Vision</p>
+        </div>
+      </div>
     </div>
 
-    <!-- UI Logic Script -->
-    <style>
-        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
-    <script>
-        const pages = ['dashboard', 'audit', 'results', 'history', 'settings'];
-        let cachedHistory = [];
-        let riskPieChartInstance = null;
-        let riskBarChartInstance = null;
+    <div class="pt-4">
+      <p class="text-[10px] text-gray-500 uppercase tracking-widest px-2 mb-2">Cấu hình</p>
+      <a href="#" onclick="switchTab('settings')" id="nav-settings"
+         class="nav-item nav-inactive flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition">
+        <i class="fas fa-key w-4 text-center"></i> API Key Settings
+      </a>
+    </div>
+  </nav>
 
-        // Settings Init
-        document.addEventListener("DOMContentLoaded", () => {
-            document.getElementById('apiKeyInput').value = localStorage.getItem('gemini_api_key') || '';
-        });
+  <div class="p-4 border-t border-gray-700 text-center">
+    <p class="text-[10px] text-gray-500 uppercase tracking-wider">Phát triển bởi</p>
+    <p class="text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400 mt-0.5">Đoàn Hoàng Việt</p>
+    <p class="text-[11px] text-gray-500">(Việt Gamer) · TaxLens-AI v3.1</p>
+  </div>
+</aside>
 
-        function saveSettings() {
-            localStorage.setItem('gemini_api_key', document.getElementById('apiKeyInput').value.trim());
-            alert('Lưu cài đặt thành công!');
-        }
+<!-- ──────────── MAIN ──────────── -->
+<div class="flex-1 flex flex-col h-screen overflow-hidden">
 
-        function switchTab(tabId) {
-            pages.forEach(p => { document.getElementById(`page-${p}`).classList.add('hidden'); });
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.className = "nav-btn flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-700 hover:text-white rounded-lg font-medium transition";
-            });
-            
-            if(['dashboard', 'audit', 'history', 'settings'].includes(tabId)){
-                let activeBtn = document.getElementById(`nav-${tabId}`);
-                if (activeBtn) {
-                    activeBtn.className = "nav-btn flex items-center gap-3 px-4 py-3 bg-blue-600/20 text-blue-400 rounded-lg font-medium transition";
-                }
-            }
+  <!-- Topbar -->
+  <header class="h-14 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-6 flex-shrink-0">
+    <h2 id="top-title" class="text-base font-semibold text-gray-200">Executive Dashboard</h2>
+    <div class="flex items-center gap-3">
+      <span id="api-key-indicator" class="text-xs text-gray-500">🔑 API Key: <span id="api-key-status" class="text-red-400">Chưa cấu hình</span></span>
+      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold shadow">VG</div>
+    </div>
+  </header>
 
-            document.getElementById(`page-${tabId}`).classList.remove('hidden');
-            
-            const titles = { 'dashboard': 'Executive Dashboard', 'audit': 'New Audit Pipeline', 'history': 'Database Records', 'results': 'Audit Output', 'settings': 'System Settings' };
-            document.getElementById('top-title').innerText = titles[tabId];
+  <main class="flex-1 overflow-y-auto p-6 bg-gray-900">
 
-            if(tabId === 'history' || tabId === 'dashboard') loadHistory();
-        }
+    <!-- ── DASHBOARD ── -->
+    <section id="page-dashboard" class="block fade-in">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold">Executive Dashboard</h3>
+        <button onclick="switchTab('audit')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-4 py-2 rounded-lg font-medium transition flex items-center gap-2">
+          <i class="fas fa-plus"></i> Kiểm Toán Mới
+        </button>
+      </div>
 
-        // Fetch DB Data
-        async function loadHistory() {
-            try {
-                const res = await fetch('/api/v1/reports');
-                const raw = await res.json();
-                if(raw.status === 'success'){
-                    cachedHistory = raw.data;
-                    renderHistory();
-                    if(document.getElementById('page-dashboard').classList.contains('hidden') === false) {
-                        calculateDashboardMetrics();
-                    }
-                }
-            } catch (e) {
-                console.error("Lỗi lấy DB:", e);
-            }
-        }
+      <div class="grid grid-cols-4 gap-4 mb-6">
+        <div class="bg-gray-800 p-5 rounded-xl border border-gray-700">
+          <p class="text-gray-400 text-xs font-semibold uppercase tracking-wide">Tổng Audits</p>
+          <h4 class="text-3xl font-bold mt-2" id="db-total-audits">--</h4>
+        </div>
+        <div class="bg-gray-800 p-5 rounded-xl border border-red-500/30 border-l-4 border-l-red-500">
+          <p class="text-gray-400 text-xs font-semibold uppercase tracking-wide">VAT Anomalies</p>
+          <h4 class="text-3xl font-bold mt-2" id="db-vat-errors">--</h4>
+        </div>
+        <div class="bg-gray-800 p-5 rounded-xl border border-yellow-500/30 border-l-4 border-l-yellow-400">
+          <p class="text-gray-400 text-xs font-semibold uppercase tracking-wide">CIT / Fake Inv.</p>
+          <h4 class="text-3xl font-bold mt-2" id="db-cit-errors">--</h4>
+        </div>
+        <div class="bg-gray-800 p-5 rounded-xl border border-blue-500/30 border-l-4 border-l-blue-400">
+          <p class="text-gray-400 text-xs font-semibold uppercase tracking-wide">Hồ Sơ Sạch</p>
+          <h4 class="text-3xl font-bold mt-2" id="db-safe-records">--</h4>
+        </div>
+      </div>
 
-        function calculateDashboardMetrics() {
-            document.getElementById('db-total-audits').innerText = cachedHistory.length;
-            let vatErrors = 0, citErrors = 0, fakeInvoice = 0, safeRecords = 0;
-            let vatMoney = 0, citMoney = 0, fakeMoney = 0;
-            
-            cachedHistory.forEach(r => {
-                r.working_papers.forEach(w => {
-                    const ch_lech = parseFloat((w['Số tiền chênh lệch']||"0").replace(/[^0-9.-]+/g,"")) || 0;
-                    
-                    if(w.Class_Risk === 'CLASS_1_VAT_LEAK') { vatErrors++; vatMoney += ch_lech; }
-                    else if(w.Class_Risk === 'CLASS_3_CIT_REJECT') { citErrors++; citMoney += ch_lech; }
-                    else if(w.Class_Risk === 'CLASS_2_FAKE_INVOICE') { fakeInvoice++; fakeMoney += ch_lech; }
-                    else if(w.Class_Risk === 'CLASS_0_SAFE' || w.Class_Risk === 'N/A') { safeRecords++; }
-                });
-            });
-            
-            document.getElementById('db-vat-errors').innerText = vatErrors;
-            document.getElementById('db-cit-errors').innerText = citErrors + fakeInvoice;
-            document.getElementById('db-safe-records').innerText = safeRecords || (cachedHistory.length > 0 ? "100+" : 0);
-            
-            // Render Charts
-            renderCharts(
-                [vatErrors, citErrors, fakeInvoice],
-                [vatMoney, citMoney, fakeMoney]
-            );
-        }
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="bg-gray-800 p-5 rounded-xl border border-gray-700">
+          <h4 class="text-sm font-semibold text-gray-300 mb-3">Tỷ Lệ Phân Loại Rủi Ro</h4>
+          <div class="h-56"><canvas id="riskPieChart"></canvas></div>
+        </div>
+        <div class="bg-gray-800 p-5 rounded-xl border border-gray-700">
+          <h4 class="text-sm font-semibold text-gray-300 mb-3">Số Tiền Rủi Ro Theo Loại (VNĐ)</h4>
+          <div class="h-56"><canvas id="riskBarChart"></canvas></div>
+        </div>
+      </div>
 
-        function renderCharts(counts, moneys) {
-            const commonOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#e5e7eb' } } } };
-            
-            if(riskPieChartInstance) riskPieChartInstance.destroy();
-            if(riskBarChartInstance) riskBarChartInstance.destroy();
+      <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 flex items-center justify-between">
+        <div>
+          <h4 class="font-semibold">Hỗ Trợ Đa Định Dạng</h4>
+          <div class="flex gap-2 mt-2 flex-wrap">
+            <span class="file-chip">📊 CSV</span><span class="file-chip">📋 Excel</span>
+            <span class="file-chip">🗒️ XML HĐ</span><span class="file-chip">📄 PDF</span>
+            <span class="file-chip">🖼️ PNG/JPG</span><span class="file-chip">📦 JSON</span>
+          </div>
+        </div>
+        <button onclick="switchTab('audit')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition">
+          <i class="fas fa-brain mr-2"></i>Run Pipeline
+        </button>
+      </div>
+    </section>
 
-            const ctxPie = document.getElementById('riskPieChart');
-            if (ctxPie) {
-                riskPieChartInstance = new Chart(ctxPie.getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['VAT Leak', 'CIT Reject', 'Fake Invoice'],
-                        datasets: [{
-                            data: counts,
-                            backgroundColor: ['#ef4444', '#f59e0b', '#f97316'],
-                            borderColor: '#1f2937',
-                            borderWidth: 2
-                        }]
-                    },
-                    options: commonOptions
-                });
-            }
+    <!-- ── AUDIT ── -->
+    <section id="page-audit" class="hidden fade-in max-w-3xl mx-auto">
+      <div class="bg-gray-800 rounded-xl p-7 border border-gray-700 shadow-2xl">
+        <h3 class="text-xl font-bold text-indigo-400 border-b border-gray-700 pb-4 mb-6">
+          <i class="fas fa-search-dollar mr-2"></i>Bắt Đầu Kiểm Toán
+        </h3>
 
-            const ctxBar = document.getElementById('riskBarChart');
-            if (ctxBar) {
-                riskBarChartInstance = new Chart(ctxBar.getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: ['VAT Leak', 'CIT Reject', 'Fake Invoice'],
-                        datasets: [{
-                            label: 'Số tiền rủi ro (VND)',
-                            data: moneys,
-                            backgroundColor: '#3b82f6',
-                            borderRadius: 4
-                        }]
-                    },
-                    options: {
-                        ...commonOptions,
-                        scales: {
-                            y: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } },
-                            x: { ticks: { color: '#9ca3af' }, grid: { display: false } }
-                        }
-                    }
-                });
-            }
-        }
+        <form id="auditForm" class="space-y-5">
+          <!-- Client Dropdown -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-300 mb-2">
+              Khách Hàng <span class="badge-ent ml-1">ENTERPRISE</span>
+            </label>
+            <div class="flex gap-2">
+              <select id="clientSelect"
+                class="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-3 py-2.5 text-white text-sm outline-none focus:border-indigo-500 transition">
+              </select>
+              <button type="button" onclick="addNewClient()"
+                class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-lg text-sm transition flex items-center gap-1 whitespace-nowrap">
+                <i class="fas fa-plus text-xs"></i> Thêm mới
+              </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Danh sách lưu trong trình duyệt (localStorage)</p>
+          </div>
 
-        function renderHistory() {
-            const hTable = document.getElementById('historyTable');
-            hTable.innerHTML = '';
-            if(cachedHistory.length === 0) {
-                hTable.innerHTML = '<tr><td colspan="5" class="py-10 text-center text-gray-500">Chưa có database record nào.</td></tr>';
-                return;
-            }
-            cachedHistory.forEach(r => {
-                hTable.innerHTML += `<tr class="hover:bg-gray-700/50 transition">
-                    <td class="px-6 py-4 font-bold text-gray-400">#${r.id}</td>
-                    <td class="px-6 py-4 font-semibold text-white">${r.client_name}</td>
-                    <td class="px-6 py-4 text-sm text-gray-400">${r.created_at}</td>
-                    <td class="px-6 py-4 text-sm text-blue-300">${r.tenant_firm}</td>
-                    <td class="px-6 py-4"><button onclick="viewReportJSON(${r.id})" class="text-xs bg-gray-600 hover:bg-gray-500 px-3 py-1 rounded">View Report</button></td>
-                </tr>`;
-            });
-        }
-        
-        function viewReportJSON(id) {
-            const rep = cachedHistory.find(x => x.id === id);
-            if(rep) {
-                renderResultsView(rep.working_papers, rep.management_letter, rep.client_name);
-            }
-        }
+          <!-- Dropzone -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-300 mb-2">
+              Tải Lên Dữ Liệu <span class="badge-ent ml-1">MULTI-FORMAT</span>
+            </label>
+            <div id="dropzone"
+              class="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-indigo-500 transition bg-gray-900/50 cursor-pointer">
+              <i class="fas fa-cloud-upload-alt text-3xl text-gray-500 mb-3"></i>
+              <p class="text-gray-300 text-sm">Kéo thả file hoặc click để chọn</p>
+              <p class="text-gray-500 text-xs mt-1">Hỗ trợ: CSV · Excel · XML · PDF · PNG · JPG · JSON</p>
+              <input type="file" id="fileInput" multiple accept=".csv,.xlsx,.xls,.xml,.json,.pdf,.png,.jpg,.jpeg" class="hidden">
+            </div>
+            <!-- File chips preview -->
+            <div id="fileChips" class="flex flex-wrap gap-2 mt-3"></div>
+          </div>
 
-        // Drag & drop logic
-        const dropzone = document.getElementById('dropzone');
-        const fileInput = document.getElementById('fileInput');
-        let uploadedFiles = [];
+          <button type="submit"
+            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-900/30 transition-all active:scale-95 text-sm">
+            <i class="fas fa-brain mr-2"></i>EXECUTE FORENSIC AI PIPELINE
+          </button>
+        </form>
 
-        dropzone.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', (e) => { uploadedFiles = e.target.files; document.getElementById('fileCount').innerText = `${uploadedFiles.length} files Ready.`; });
-        dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("border-blue-500"); });
-        dropzone.addEventListener("dragleave", (e) => { e.preventDefault(); dropzone.classList.remove("border-blue-500"); });
-        dropzone.addEventListener("drop", (e) => {
-            e.preventDefault(); dropzone.classList.remove("border-blue-500");
-            uploadedFiles = e.dataTransfer.files; document.getElementById('fileCount').innerText = `${uploadedFiles.length} files Ready.`;
-        });
+        <!-- Progress -->
+        <div id="progressSection" class="hidden mt-6 space-y-3">
+          <div class="flex justify-between text-sm text-gray-400">
+            <span id="progressLabel">Đang khởi động...</span>
+            <span id="progressPct" class="font-mono text-indigo-400">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width:0%"></div>
+          </div>
+          <div id="progressStage" class="text-xs text-gray-500 text-center">Pipeline in progress...</div>
+        </div>
+      </div>
+    </section>
 
-        // Form Submit
-        document.getElementById('auditForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if(uploadedFiles.length === 0) return alert("Select files first!");
-            
-            let firmName = document.getElementById('firmName').value.trim();
-            if(!firmName) firmName = "Global Auditing Firm";
-            let clientName = document.getElementById('clientName').value.trim();
-            if(!clientName) clientName = "Client Corporation";
-            document.getElementById('currentFirm').innerText = firmName;
-            
-            document.getElementById('auditForm').classList.add('hidden');
-            document.getElementById('loader').classList.remove('hidden');
-            
-            let loadingMsgs = ["Đang nạp 5000 dòng CSV...", "Đang phân tích Pandas Processing...", "Đang đối chiếu Nghị định 123...", "Đang trích xuất Báo cáo...", "Chờ Gemini Oracle phản hồi..."];
-            let msgIdx = 0;
-            document.getElementById('loaderText').innerText = loadingMsgs[0];
-            const loadIntv = setInterval(() => {
-                msgIdx = (msgIdx + 1) % loadingMsgs.length;
-                document.getElementById('loaderText').innerText = loadingMsgs[msgIdx];
-            }, 2000);
+    <!-- ── RESULTS ── -->
+    <section id="page-results" class="hidden fade-in space-y-5">
+      <div class="flex justify-between items-center border-b border-gray-700 pb-4">
+        <h3 class="text-xl font-bold">Báo Cáo Rủi Ro — <span id="res-client" class="text-indigo-400"></span></h3>
+        <div class="flex gap-2">
+          <button onclick="switchTab('history')" class="text-gray-400 hover:text-white text-sm underline">Xem lịch sử</button>
+          <button onclick="switchTab('audit')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-4 py-2 rounded-lg">+ Kiểm Toán Mới</button>
+        </div>
+      </div>
 
-            const fd = new FormData();
-            fd.append('audit_firm_name', firmName);
-            fd.append('client_name', clientName);
-            fd.append('api_key', localStorage.getItem('gemini_api_key') || '');
-            for(let i=0; i<uploadedFiles.length; i++) fd.append('files', uploadedFiles[i]);
+      <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+        <div class="p-3 bg-gray-900/50 border-b border-gray-700 flex items-center gap-3">
+          <h4 class="font-bold text-red-400 text-sm">Working Papers — Giao Dịch Bị Gắn Cờ</h4>
+          <span id="risk-count-badge" class="badge-pro ml-auto"></span>
+        </div>
+        <div class="overflow-x-auto overflow-y-auto" style="max-height:380px;">
+          <table class="w-full text-left text-xs text-gray-300">
+            <thead class="text-gray-400 bg-gray-900 sticky top-0">
+              <tr>
+                <th class="px-4 py-3 whitespace-nowrap">Risk Class</th>
+                <th class="px-4 py-3 whitespace-nowrap">Mã Lỗi</th>
+                <th class="px-4 py-3">Khoản Mục</th>
+                <th class="px-4 py-3 whitespace-nowrap">Ngày GD</th>
+                <th class="px-4 py-3 whitespace-nowrap">Số Tiền Gốc</th>
+                <th class="px-4 py-3 whitespace-nowrap">Chênh Lệch</th>
+                <th class="px-4 py-3 min-w-[220px]">Cơ Sở Pháp Lý</th>
+              </tr>
+            </thead>
+            <tbody id="riskTable" class="divide-y divide-gray-700/50"></tbody>
+          </table>
+        </div>
+      </div>
 
-            try {
-                const res = await fetch('/api/v1/audit', { method: 'POST', body: fd });
-                const rData = await res.json();
-                if(rData.status === 'success') {
-                    renderResultsView(rData.data.working_papers, rData.data.management_letter, clientName);
-                } else alert("Error: " + rData.message);
-            } catch(e) {
-                alert("Connection failed");
-            } finally {
-                clearInterval(loadIntv);
-                document.getElementById('loader').classList.add('hidden');
-                document.getElementById('auditForm').classList.remove('hidden');
-                uploadedFiles = []; document.getElementById('fileCount').innerText = ''; fileInput.value = '';
-            }
-        });
+      <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 prose prose-invert max-w-none text-sm">
+        <h4 class="text-indigo-400 font-bold border-b border-gray-700 pb-2 mb-4 flex items-center gap-2">
+          <i class="fas fa-file-alt"></i> Management Letter (ISA 265)
+          <span class="badge-ent ml-2">ENTERPRISE</span>
+        </h4>
+        <div id="markdownReport"></div>
+      </div>
+    </section>
 
-        function getBadge(cls) {
-            if(cls === 'CLASS_1_VAT_LEAK') return '<span class="bg-red-500/20 text-red-400 border border-red-500 px-2 py-1 rounded text-xs">VAT_LEAK</span>';
-            if(cls === 'CLASS_3_CIT_REJECT') return '<span class="bg-yellow-500/20 text-yellow-500 border border-yellow-500 px-2 py-1 rounded text-xs">CIT_REJECT</span>';
-            if(cls === 'CLASS_2_FAKE_INVOICE') return '<span class="bg-orange-500/20 text-orange-400 border border-orange-500 px-2 py-1 rounded text-xs">FAKE_TCTN</span>';
-            return `<span class="bg-gray-600 px-2 py-1 rounded text-xs">${cls||'N/A'}</span>`;
-        }
+    <!-- ── HISTORY ── -->
+    <section id="page-history" class="hidden fade-in">
+      <h3 class="text-xl font-bold mb-5 border-b border-gray-700 pb-4">Audit Database Logs</h3>
+      <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+        <table class="w-full text-left text-sm text-gray-300">
+          <thead class="text-xs text-gray-400 bg-gray-900">
+            <tr>
+              <th class="px-5 py-3">ID</th>
+              <th class="px-5 py-3">Khách Hàng</th>
+              <th class="px-5 py-3">Thời Gian</th>
+              <th class="px-5 py-3">Đơn Vị</th>
+              <th class="px-5 py-3">Action</th>
+            </tr>
+          </thead>
+          <tbody id="historyTable" class="divide-y divide-gray-700">
+            <tr><td colspan="5" class="py-10 text-center text-gray-500">Đang tải...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-        function renderResultsView(wp, letter, cName) {
-            switchTab('results');
-            document.getElementById('res-client').innerText = cName;
-            
-            let tHtml = "";
-            wp.forEach(i => {
-                tHtml += `<tr class="hover:bg-gray-700 transition">
-                    <td class="px-6 py-4 whitespace-nowrap">${getBadge(i.Class_Risk)}</td>
-                    <td class="px-6 py-4 text-red-400 font-bold whitespace-nowrap">${i['Mã rủi ro']}</td>
-                    <td class="px-6 py-4 leading-relaxed">${i['Khoản mục']}</td>
-                    <td class="px-6 py-4 font-mono text-yellow-300 whitespace-nowrap">${i['Số tiền chênh lệch']}</td>
-                    <td class="px-6 py-4 text-green-400 font-medium leading-relaxed">${i['Đề xuất']}</td>
-                </tr>`;
-            });
-            document.getElementById('riskTable').innerHTML = tHtml || '<tr><td colspan="5" class="p-4 text-center">No anomalies found.</td></tr>';
-            document.getElementById('markdownReport').innerHTML = marked.parse(letter);
-        }
+    <!-- ── SETTINGS ── -->
+    <section id="page-settings" class="hidden fade-in max-w-xl mx-auto">
+      <div class="bg-gray-800 rounded-xl p-7 border border-gray-700 shadow-2xl">
+        <h3 class="text-xl font-bold text-indigo-400 border-b border-gray-700 pb-4 mb-6">
+          <i class="fas fa-key mr-2"></i>API Key Settings
+        </h3>
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-semibold text-gray-300 mb-2">Google Gemini API Key <span class="badge-pro ml-1">PRO / ENTERPRISE</span></label>
+            <input type="password" id="apiKeyInput" placeholder="AIzaSy..."
+              class="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white text-sm outline-none focus:border-indigo-500 transition">
+            <p class="text-xs text-gray-500 mt-2">Lưu trong localStorage. Chỉ gửi lên server khi Run Pipeline.</p>
+          </div>
+          <div class="pt-2 border-t border-gray-700">
+            <p class="text-xs text-gray-400 mb-1">Tier không cần API Key:</p>
+            <p class="text-xs text-green-400">✅ Rule-Based Validation (CORE · FREE) — hoàn toàn offline</p>
+          </div>
+          <button onclick="saveSettings()"
+            class="bg-green-600 hover:bg-green-500 text-white px-6 py-2.5 rounded-lg font-medium text-sm transition shadow">
+            <i class="fas fa-save mr-2"></i>Lưu Cấu Hình
+          </button>
+        </div>
+      </div>
+    </section>
 
-        // Init
+  </main>
+</div>
+
+<script>
+// ── Constants ───────────────────────────────────────────────────────
+const PAGES = ['dashboard','audit','results','history','settings'];
+const FILE_ICONS = { csv:'📊', xlsx:'📋', xls:'📋', xml:'🗒️', json:'📦', pdf:'📄', png:'🖼️', jpg:'🖼️', jpeg:'🖼️' };
+const DEFAULT_CLIENTS = ['Công Ty TNHH ABC','Tập Đoàn XYZ','Cty CP Thương Mại VN'];
+
+// ── State ────────────────────────────────────────────────────────────
+let cachedHistory = [];
+let uploadedFiles = [];
+let riskPie = null, riskBar = null;
+let pollInterval = null;
+
+// ── Init ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const key = localStorage.getItem('gemini_api_key') || '';
+  document.getElementById('apiKeyInput').value = key;
+  updateApiKeyStatus(key);
+  initClientDropdown();
+  loadHistory();
+});
+
+function updateApiKeyStatus(key) {
+  const el = document.getElementById('api-key-status');
+  if (key) { el.textContent = '✅ Đã cấu hình'; el.className = 'text-green-400'; }
+  else       { el.textContent = '⚠️ Chưa cấu hình'; el.className = 'text-yellow-400'; }
+}
+
+function saveSettings() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  localStorage.setItem('gemini_api_key', key);
+  updateApiKeyStatus(key);
+  showToast('✅ Đã lưu cấu hình API Key!');
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'fixed bottom-6 right-6 bg-gray-700 text-white text-sm px-4 py-3 rounded-xl shadow-2xl z-50 fade-in';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2800);
+}
+
+// ── Client Dropdown ───────────────────────────────────────────────────
+function getClientList() {
+  try { return JSON.parse(localStorage.getItem('taxlens_clients') || 'null') || DEFAULT_CLIENTS; }
+  catch { return DEFAULT_CLIENTS; }
+}
+
+function saveClientList(list) {
+  localStorage.setItem('taxlens_clients', JSON.stringify(list));
+}
+
+function initClientDropdown() {
+  const sel = document.getElementById('clientSelect');
+  sel.innerHTML = '';
+  getClientList().forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    sel.appendChild(opt);
+  });
+}
+
+function addNewClient() {
+  const name = prompt('Tên khách hàng mới:');
+  if (!name || !name.trim()) return;
+  const list = getClientList();
+  if (!list.includes(name.trim())) {
+    list.unshift(name.trim());
+    saveClientList(list);
+    initClientDropdown();
+    document.getElementById('clientSelect').value = name.trim();
+    showToast(`✅ Đã thêm "${name.trim()}"`);
+  }
+}
+
+// ── File Upload ───────────────────────────────────────────────────────
+const dropzone   = document.getElementById('dropzone');
+const fileInput  = document.getElementById('fileInput');
+const fileChips  = document.getElementById('fileChips');
+
+dropzone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => handleFiles(e.target.files));
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('border-indigo-500'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('border-indigo-500'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('border-indigo-500');
+  handleFiles(e.dataTransfer.files);
+});
+
+function handleFiles(files) {
+  uploadedFiles = files;
+  fileChips.innerHTML = '';
+  [...files].forEach(f => {
+    const ext = f.name.split('.').pop().toLowerCase();
+    const icon = FILE_ICONS[ext] || '📁';
+    const size = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+'MB' : Math.round(f.size/1024)+'KB';
+    fileChips.innerHTML += `<span class="file-chip">${icon} <b>${f.name}</b> <span class="text-gray-500">${size}</span></span>`;
+  });
+}
+
+// ── Dynamic Loading Messages ──────────────────────────────────────────
+function getInitialMessages(files) {
+  const types = [...files].map(f => f.name.split('.').pop().toLowerCase());
+  const msgs = [];
+  const xmlCount  = types.filter(t => t === 'xml').length;
+  const csvCount  = types.filter(t => t === 'csv').length;
+  const pdfCount  = types.filter(t => t === 'pdf').length;
+  const imgCount  = types.filter(t => ['png','jpg','jpeg'].includes(t)).length;
+  const xlsCount  = types.filter(t => ['xlsx','xls'].includes(t)).length;
+  const jsonCount = types.filter(t => t === 'json').length;
+
+  if (xmlCount)  msgs.push(`🗒️ Đang parse ${xmlCount} file XML hóa đơn điện tử...`);
+  if (csvCount)  msgs.push(`📊 Đang nạp ${csvCount} file CSV (chunked 5,000 rows)...`);
+  if (pdfCount)  msgs.push(`📄 Đang trích xuất bảng từ ${pdfCount} file PDF...`);
+  if (imgCount)  msgs.push(`🖼️ Đang gửi ${imgCount} ảnh hóa đơn lên Gemini Vision...`);
+  if (xlsCount)  msgs.push(`📋 Đang đọc ${xlsCount} file Excel (openpyxl)...`);
+  if (jsonCount) msgs.push(`📦 Đang phân tích ${jsonCount} file JSON...`);
+  msgs.push('⚡ Đang chạy 6 Rule-Based Validators song song...', '🧠 Tax Oracle đang phân tích pháp lý...', '📝 Đang tổng hợp Management Letter (ISA 265)...');
+  return msgs;
+}
+
+// ── Form Submit ───────────────────────────────────────────────────────
+document.getElementById('auditForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!uploadedFiles.length) { showToast('⚠️ Chưa chọn file!'); return; }
+
+  const clientName = document.getElementById('clientSelect').value || 'Client Corporation';
+  const apiKey = localStorage.getItem('gemini_api_key') || '';
+
+  document.getElementById('progressSection').classList.remove('hidden');
+  document.getElementById('auditForm').querySelector('button[type="submit"]').disabled = true;
+
+  const loaderMsgs = getInitialMessages(uploadedFiles);
+  let msgIdx = 0;
+  const loopInterval = setInterval(() => {
+    msgIdx = (msgIdx + 1) % loaderMsgs.length;
+    document.getElementById('progressLabel').textContent = loaderMsgs[msgIdx];
+  }, 2500);
+
+  const fd = new FormData();
+  fd.append('client_name', clientName);
+  fd.append('audit_firm_name', 'TaxLens-AI B2B Partner');
+  fd.append('api_key', apiKey);
+  [...uploadedFiles].forEach(f => fd.append('files', f));
+
+  try {
+    const res = await fetch('/api/v1/audit', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (data.status === 'accepted' || data.status === 'success') {
+      // Idempotency cache hit: render immediately
+      if (data.idempotency === 'cached') {
+        clearInterval(loopInterval);
+        resetProgressUI();
+        renderResultsView(data.data.working_papers, data.data.management_letter, clientName);
+        return;
+      }
+      // Start polling
+      const threadId = data.thread_id;
+      clearInterval(loopInterval);
+      startPolling(threadId, clientName);
+    } else {
+      clearInterval(loopInterval);
+      resetProgressUI();
+      showToast('❌ Lỗi: ' + (data.message || 'Unknown error'));
+    }
+  } catch (err) {
+    clearInterval(loopInterval);
+    resetProgressUI();
+    showToast('❌ Không kết nối được server');
+  }
+});
+
+// ── Polling ───────────────────────────────────────────────────────────
+function startPolling(threadId, clientName) {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/v1/audit/${threadId}/status`);
+      const st = await res.json();
+
+      document.getElementById('progressLabel').textContent  = st.message || '...';
+      document.getElementById('progressPct').textContent    = (st.progress_pct || 0) + '%';
+      document.getElementById('progressFill').style.width   = (st.progress_pct || 0) + '%';
+      document.getElementById('progressStage').textContent  = `Stage: ${st.stage || '...'}`;
+
+      if (st.status === 'done') {
+        clearInterval(pollInterval); pollInterval = null;
+        resetProgressUI();
+        if (st.result) renderResultsView(st.result.working_papers, st.result.management_letter, clientName);
         loadHistory();
-    </script>
+      } else if (st.status === 'error') {
+        clearInterval(pollInterval); pollInterval = null;
+        resetProgressUI();
+        showToast('❌ Pipeline lỗi: ' + (st.message || 'Unknown'));
+      }
+    } catch (e) { /* silently retry */ }
+  }, 1500);
+}
+
+function resetProgressUI() {
+  document.getElementById('progressSection').classList.add('hidden');
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('progressPct').textContent = '0%';
+  document.getElementById('progressLabel').textContent = 'Đang khởi động...';
+  document.querySelector('#auditForm button[type="submit"]').disabled = false;
+  uploadedFiles = [];
+  document.getElementById('fileInput').value = '';
+  document.getElementById('fileChips').innerHTML = '';
+}
+
+// ── Tab Navigation ────────────────────────────────────────────────────
+function switchTab(tabId) {
+  PAGES.forEach(p => document.getElementById(`page-${p}`).classList.add('hidden'));
+  document.querySelectorAll('.nav-item').forEach(b => {
+    b.classList.remove('nav-active'); b.classList.add('nav-inactive');
+  });
+  const navBtn = document.getElementById(`nav-${tabId}`);
+  if (navBtn) { navBtn.classList.remove('nav-inactive'); navBtn.classList.add('nav-active'); }
+  document.getElementById(`page-${tabId}`).classList.remove('hidden');
+  const titles = { dashboard:'Executive Dashboard', audit:'Kiểm Toán Mới', history:'Lịch Sử Báo Cáo', results:'Kết Quả Kiểm Toán', settings:'Cấu Hình Hệ Thống' };
+  document.getElementById('top-title').textContent = titles[tabId] || tabId;
+  if (tabId === 'history' || tabId === 'dashboard') loadHistory();
+}
+
+// ── History & Dashboard ───────────────────────────────────────────────
+async function loadHistory() {
+  try {
+    const res = await fetch('/api/v1/reports');
+    const raw = await res.json();
+    if (raw.status === 'success') {
+      cachedHistory = raw.data;
+      renderHistory();
+      if (!document.getElementById('page-dashboard').classList.contains('hidden')) calcDashboard();
+    }
+  } catch {}
+}
+
+function calcDashboard() {
+  document.getElementById('db-total-audits').textContent = cachedHistory.length;
+  let vatE=0, citE=0, fakeE=0, safe=0, vatM=0, citM=0, fakeM=0;
+  cachedHistory.forEach(r => r.working_papers.forEach(w => {
+    const m = parseFloat((w['Số tiền chênh lệch']||'0').replace(/[^0-9.-]+/g,'')) || 0;
+    if (w.Class_Risk==='CLASS_1_VAT_LEAK')      { vatE++;  vatM+=m; }
+    else if (w.Class_Risk==='CLASS_3_CIT_REJECT'){ citE++;  citM+=m; }
+    else if (w.Class_Risk==='CLASS_2_FAKE_INVOICE'){ fakeE++; fakeM+=m; }
+    else safe++;
+  }));
+  document.getElementById('db-vat-errors').textContent  = vatE;
+  document.getElementById('db-cit-errors').textContent  = citE + fakeE;
+  document.getElementById('db-safe-records').textContent= safe || (cachedHistory.length > 0 ? '100+' : 0);
+  renderCharts([vatE, citE, fakeE], [vatM, citM, fakeM]);
+}
+
+function renderCharts(counts, moneys) {
+  const commonOpts = { responsive:true, maintainAspectRatio:false,
+    plugins: { legend: { labels: { color:'#e5e7eb', font:{size:11} } } } };
+  if (riskPie) riskPie.destroy();
+  if (riskBar) riskBar.destroy();
+  const ctxP = document.getElementById('riskPieChart');
+  if (ctxP) riskPie = new Chart(ctxP.getContext('2d'), {
+    type:'doughnut',
+    data:{ labels:['VAT Leak','CIT Reject','Fake Invoice'],
+           datasets:[{ data:counts, backgroundColor:['#ef4444','#f59e0b','#f97316'], borderColor:'#1f2937', borderWidth:2 }]},
+    options: commonOpts
+  });
+  const ctxB = document.getElementById('riskBarChart');
+  if (ctxB) riskBar = new Chart(ctxB.getContext('2d'), {
+    type:'bar',
+    data:{ labels:['VAT Leak','CIT Reject','Fake Invoice'],
+           datasets:[{ label:'VNĐ', data:moneys, backgroundColor:['#6366f1','#f59e0b','#f97316'], borderRadius:5 }]},
+    options:{ ...commonOpts, scales:{ y:{ticks:{color:'#9ca3af'},grid:{color:'#374151'}}, x:{ticks:{color:'#9ca3af'},grid:{display:false}} }}
+  });
+}
+
+function renderHistory() {
+  const tbody = document.getElementById('historyTable');
+  tbody.innerHTML = '';
+  if (!cachedHistory.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="py-10 text-center text-gray-500">Chưa có dữ liệu kiểm toán.</td></tr>'; return;
+  }
+  cachedHistory.forEach(r => {
+    const cnt = r.working_papers.length;
+    tbody.innerHTML += `<tr class="hover:bg-gray-700/40 transition">
+      <td class="px-5 py-3 font-bold text-gray-400">#${r.id}</td>
+      <td class="px-5 py-3 font-semibold text-white">${r.client_name}</td>
+      <td class="px-5 py-3 text-xs text-gray-400">${r.created_at}</td>
+      <td class="px-5 py-3 text-xs text-indigo-300">${r.tenant_firm}</td>
+      <td class="px-5 py-3">
+        <button onclick="viewReport(${r.id})"
+          class="text-xs bg-indigo-600/30 hover:bg-indigo-600/60 text-indigo-300 px-3 py-1 rounded transition">
+          👁 View · ${cnt} flags
+        </button>
+      </td>
+    </tr>`;
+  });
+}
+
+function viewReport(id) {
+  const r = cachedHistory.find(x => x.id === id);
+  if (r) renderResultsView(r.working_papers, r.management_letter, r.client_name);
+}
+
+// ── Risk Badge ────────────────────────────────────────────────────────
+function getBadge(cls) {
+  const map = {
+    CLASS_1_VAT_LEAK:    '<span class="bg-red-500/20 text-red-400 border border-red-500/50 px-2 py-0.5 rounded text-[10px] font-bold">VAT LEAK</span>',
+    CLASS_3_CIT_REJECT:  '<span class="bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 px-2 py-0.5 rounded text-[10px] font-bold">CIT REJECT</span>',
+    CLASS_2_FAKE_INVOICE:'<span class="bg-orange-500/20 text-orange-400 border border-orange-500/50 px-2 py-0.5 rounded text-[10px] font-bold">FAKE INV.</span>',
+  };
+  return map[cls] || `<span class="bg-gray-700 px-2 py-0.5 rounded text-[10px]">${cls||'N/A'}</span>`;
+}
+
+// ── Render Results ────────────────────────────────────────────────────
+function renderResultsView(wp, letter, cName) {
+  switchTab('results');
+  document.getElementById('res-client').textContent = cName;
+  document.getElementById('risk-count-badge').textContent = `${wp.length} rủi ro được gắn cờ`;
+
+  let html = '';
+  wp.forEach(i => {
+    html += `<tr class="hover:bg-gray-700/30 transition">
+      <td class="px-4 py-3 whitespace-nowrap">${getBadge(i.Class_Risk)}</td>
+      <td class="px-4 py-3 text-red-400 font-mono text-[11px] whitespace-nowrap">${i['Mã rủi ro']||''}</td>
+      <td class="px-4 py-3 leading-relaxed max-w-xs">${i['Khoản mục']||''}</td>
+      <td class="px-4 py-3 text-gray-400 whitespace-nowrap">${i['Ngày Giao Dịch']||''}</td>
+      <td class="px-4 py-3 font-mono text-blue-300 whitespace-nowrap">${i['Số Tiền Gốc']||''}</td>
+      <td class="px-4 py-3 font-mono text-yellow-300 whitespace-nowrap">${i['Số tiền chênh lệch']||''}</td>
+      <td class="px-4 py-3 text-gray-400 text-[11px] leading-relaxed">${i['Cơ sở pháp lý']||''}</td>
+    </tr>`;
+  });
+  document.getElementById('riskTable').innerHTML = html ||
+    '<tr><td colspan="7" class="p-6 text-center text-green-400">✅ Không phát hiện rủi ro. Hồ sơ sạch.</td></tr>';
+  document.getElementById('markdownReport').innerHTML = marked.parse(letter || '');
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────
+loadHistory();
+</script>
 </body>
 </html>

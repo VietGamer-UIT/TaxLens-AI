@@ -9,6 +9,8 @@ Release/
 .env
 secret*.json
 *.db
+*.db-wal
+*.db-shm
 
 # Python & System
 __pycache__/
@@ -23,3 +25,4 @@ data/uploads/
 data/audit_logs/*.jsonl
 data/vector_store/
 sample_data/
+temp_uploads/
