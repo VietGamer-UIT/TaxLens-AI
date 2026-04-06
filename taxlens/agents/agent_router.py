@@ -50,8 +50,8 @@ KY_HIEU_PATTERN = re.compile(r"^[12][CKMB]\d{2}[A-Z][A-Z0-9]{1,4}$")
 PRO_MODEL_THRESHOLD_VND = 50_000_000
 
 # LLM Endpoints
-MODEL_FLASH = "gemini-1.5-flash-latest"
-MODEL_PRO = "gemini-1.5-pro-latest"
+MODEL_FLASH = "gemini-flash-latest"
+MODEL_PRO = "gemini-pro-latest"
 
 # ─────────────────────────────────────────────────────────────────────
 # GRAPH STATE
@@ -358,8 +358,8 @@ def node_rule_validator(state: GraphState) -> Dict[str, Any]:
 def node_oracle_agent(state: GraphState) -> Dict[str, Any]:
     """
     Node 3 — Tax Oracle: LLM phân tích pháp lý với smart model routing.
-    Nếu total_exposure > 50M VND → gemini-1.5-pro (chain-of-thought sâu).
-    Nếu <= 50M VND → gemini-1.5-flash (nhanh, rẻ).
+    Nếu total_exposure > 50M VND → gemini-pro-latest (chain-of-thought sâu).
+    Nếu <= 50M VND → gemini-flash-latest (nhanh, rẻ).
     """
     papers = dict(state.get("working_papers", {}))
     review_note = state.get("review_note", "")
@@ -399,10 +399,11 @@ def node_oracle_agent(state: GraphState) -> Dict[str, Any]:
 
         os.environ["GOOGLE_API_KEY"] = api_key  # đảm bảo langchain_google_genai nhận key
 
-        from langchain_google_genai import ChatGoogleGenerativeAI
+        from langchain_google_genai import ChatGoogleGenerativeAI as ChatGoogleGenAI
 
-        llm = ChatGoogleGenerativeAI(
+        llm = ChatGoogleGenAI(
             model=chosen_model,
+            api_key=os.environ["GOOGLE_API_KEY"],
             temperature=0.1,
             max_retries=2,
         )
