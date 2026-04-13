@@ -91,12 +91,26 @@ app = FastAPI(
 # preflight OPTIONS) is captured in the audit log.
 app.add_middleware(AuditMiddleware)
 
+# ---------------------------------------------------------------------------
+# CORS — explicitly whitelist the Next.js frontend origins.
+# NOTE: allow_origins=["*"] is INCOMPATIBLE with allow_credentials=True in
+#       modern browsers (CORS spec §3.2.2). Always use explicit origins.
+# ---------------------------------------------------------------------------
+_ALLOWED_ORIGINS = [
+    "http://localhost:3000",       # Next.js dev server
+    "http://127.0.0.1:3000",      # alternate localhost form
+    "http://frontend:3000",        # Docker Compose service name
+    # Add your VPS / production domain here, e.g.:
+    # "https://taxlens.yourdomain.com",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],        # Tighten in production (whitelist your domains)
+    allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["X-Incident-ID"],
 )
 
 
