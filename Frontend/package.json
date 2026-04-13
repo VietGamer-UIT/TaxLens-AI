@@ -1,0 +1,40 @@
+{
+  "name": "taxlens-ai-frontend",
+  "version": "1.0.0",
+  "description": "TaxLens-AI by Đoàn Hoàng Việt (Việt Gamer) — IR Dashboard Frontend",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "14.2.3",
+    "react": "^18",
+    "react-dom": "^18",
+    "axios": "^1.6.8",
+    "date-fns": "^3.6.0",
+    "lucide-react": "^0.372.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.3.0",
+    "class-variance-authority": "^0.7.0",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-scroll-area": "^1.0.5",
+    "@radix-ui/react-separator": "^1.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "tailwindcss": "^3.4.1",
+    "postcss": "^8",
+    "autoprefixer": "^10.0.1",
+    "@tailwindcss/typography": "^0.5.13",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.3"
+  }
+}

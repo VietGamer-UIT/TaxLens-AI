@@ -1,0 +1,147 @@
+# =============================================================================
+# TaxLens-AI :: Docker Compose — Backend + PostgreSQL
+# Copyright: TaxLens-AI by Đoàn Hoàng Việt (Việt Gamer)
+# =============================================================================
+# Services:
+#   db      : PostgreSQL 16 (audit trail persistence)
+#   backend : FastAPI + LangGraph IR agent stack
+#
+# Network:
+#   taxlens_net : Isolated bridge network — services communicate by name
+#                   (backend → db:5432), no direct host port exposure for DB.
+#
+# Security:
+#   - DB port 5432 is NOT published to the host (internal only)
+#   - All secrets sourced from .env file (never hard-coded here)
+#   - backend runs as non-root appuser (enforced in Dockerfile)
+#   - read_only: true for backend filesystem (app writes nothing to disk)
+#   - tmpfs mount at /tmp for any ephemeral writes the process needs
+# =============================================================================
+
+version: "3.9"
+
+# ── Shared environment variable file ──────────────────────────────────────────
+# Copy .env.example → .env and fill in values before running docker-compose up
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL — Audit Trail Database ───────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: taxlens_db
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-taxlens}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_in_prod}
+      POSTGRES_DB: ${POSTGRES_DB:-taxlens_audit}
+      # Tune PG for write-heavy audit log workload
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.utf8"
+
+    volumes:
+      # Named volume for durable data persistence across container restarts
+      - postgres_data:/var/lib/postgresql/data
+      # Optional: mount custom pg_hba.conf / postgresql.conf overrides
+      # - ./DevOps/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+
+    networks:
+      - taxlens_net
+
+    # DB port is intentionally NOT published to the host.
+    # Only the backend service (on the same internal network) can reach it.
+    expose:
+      - "5432"
+
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-taxlens} -d ${POSTGRES_DB:-taxlens_audit}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    restart: unless-stopped
+
+    # Resource limits — prevents a runaway DB from starving the backend
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+  # ── FastAPI Backend — IR Agent Stack ────────────────────────────────────────
+  backend:
+    build:
+      context: . # Repo root (for COPY requirements.txt)
+      dockerfile: DevOps/Docker/Dockerfile.backend
+      target: runtime # Only build the final runtime stage
+
+    container_name: taxlens_backend
+    image: taxlens-ai-backend:latest
+
+    # Environment variables — sourced from .env file (never commit .env to git)
+    environment:
+      # ── Application ──────────────────────────────────────────────────
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      # ── PostgreSQL (audit DB) ─────────────────────────────────────────
+      POSTGRES_USER: ${POSTGRES_USER:-taxlens}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_in_prod}
+      POSTGRES_HOST: db # Docker service name (internal DNS)
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-taxlens_audit}
+
+      # ── Splunk MCP ────────────────────────────────────────────────────
+      SPLUNK_BASE_URL: ${SPLUNK_BASE_URL:-https://splunk.taxlens.local:8089}
+      SPLUNK_TOKEN: ${SPLUNK_TOKEN:-REPLACE_WITH_REAL_TOKEN}
+
+      # ── Threat Intelligence APIs ──────────────────────────────────────
+      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-REPLACE_WITH_REAL_KEY}
+      ABUSEIPDB_API_KEY: ${ABUSEIPDB_API_KEY:-REPLACE_WITH_REAL_KEY}
+
+      # ── Google Gemini (LLM backend) ───────────────────────────────────
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-REPLACE_WITH_REAL_KEY}
+
+    ports:
+      # Publish FastAPI to host for external access (Nginx/Traefik in front)
+      - "${BACKEND_PORT:-8000}:8000"
+
+    networks:
+      - taxlens_net
+
+    depends_on:
+      db:
+        condition: service_healthy # Wait until PG passes healthcheck
+
+    # Security hardening
+    read_only: true # App filesystem is read-only (matches non-root user)
+    tmpfs:
+      - /tmp:size=64m # Ephemeral scratch space (Plaso temp files, etc.)
+
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    restart: unless-stopped
+
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+
+# ── Named Volumes ─────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+    labels:
+      com.taxlens.description: "PostgreSQL audit trail persistent storage"
+
+# ── Networks ──────────────────────────────────────────────────────────────────
+networks:
+  taxlens_net:
+    driver: bridge
+    labels:
+      com.taxlens.description: "Isolated internal network — backend ↔ db only"

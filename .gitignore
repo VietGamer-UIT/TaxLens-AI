@@ -1,28 +1,62 @@
-# Enterprise Production Gitignore
-.vs/
-x64/
-Debug/
-Release/
-*.user
+# =============================================================================
+# ThreatLens-IR — .gitignore
+# =============================================================================
 
-# Security & Secrets
+# ── Environment & secrets ──────────────────────────────────────────────────────
 .env
-secret*.json
-*.db
-*.db-wal
-*.db-shm
+*.env
+*.env.local
 
-# Python & System
+# ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
+.Python
 *.egg-info/
+dist/
+build/
+.eggs/
+*.egg
 .venv/
 venv/
+env/
+
+# ── Pytest / coverage ─────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+*.xml
+
+# ── Ruff / linting ────────────────────────────────────────────────────────────
+.ruff_cache/
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+*.log
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
 .DS_Store
 
-# TaxLens local dynamic user data (do not push)
-data/uploads/
-data/audit_logs/*.jsonl
-data/vector_store/
-sample_data/
-temp_uploads/
+# ── Evidence artefacts (never commit forensic images to git) ──────────────────
+evidence/
+*.raw
+*.vmem
+*.dmp
+*.E01
+*.pcap
+*.plaso
+
+# ── Alembic generated migration versions (track selectively) ──────────────────
+# Uncomment if you want to ignore auto-generated migrations:
+# alembic/versions/
+
+# ── Temporary files ───────────────────────────────────────────────────────────
+tmp/
+temp/
+*.tmp

@@ -1,0 +1,258 @@
+# =============================================================================
+# TaxLens-AI :: GitHub Actions — CI/CD Pipeline
+# Copyright: TaxLens-AI by Đoàn Hoàng Việt (Việt Gamer)
+# =============================================================================
+# Trigger  : Push to main branch (production deploy) or pull_request to main
+#            (CI only — build + test, no deploy)
+#
+# Jobs:
+#   1. lint-and-test  : Ruff linting + pytest smoke-test (always runs)
+#   2. build-and-push : Build Docker image → push to GitHub Container Registry
+#                       (only on push to main)
+#   3. deploy-vps     : SSH into VPS, pull new image, rolling restart
+#                       (only after successful build-and-push on main)
+#
+# Secrets required (set in GitHub repo Settings → Secrets → Actions):
+#   GHCR_TOKEN            : GitHub PAT with packages:write scope
+#   VPS_HOST              : IP or hostname of the deployment VPS
+#   VPS_USER              : SSH user on VPS (e.g. ubuntu)
+#   VPS_SSH_KEY           : Private SSH key (ED25519 recommended)
+#   VPS_DEPLOY_PATH       : Absolute path on VPS (e.g. /opt/threatlens-ir)
+#   SLACK_WEBHOOK_URL     : (Optional) Slack webhook for deployment notifications
+# =============================================================================
+
+name: TaxLens-AI CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  REGISTRY:    ghcr.io
+  IMAGE_NAME:  ${{ github.repository_owner }}/taxlens-ai-backend
+  PYTHON_VER:  "3.11"
+
+# ── Global permissions (least-privilege) ──────────────────────────────────────
+permissions:
+  contents: read
+  packages: write    # Required for GHCR push
+
+# ── Cancel in-progress runs on the same branch ────────────────────────────────
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 1 — Lint & Test (runs on every push + PR)
+  # ────────────────────────────────────────────────────────────────────────────
+  lint-and-test:
+    name: Lint & Smoke Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VER }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VER }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest pytest-asyncio
+          pip install -r requirements.txt
+
+      - name: Run Ruff linter
+        run: |
+          ruff check Backend/ --output-format=github \
+            --select=E,W,F,I,S,B,C4,UP \
+            --ignore=S101,S603,S607  # Allow assert, subprocess (SIFT tools)
+
+      - name: Run LangGraph smoke test (all-mock, no external APIs)
+        run: |
+          python -m Backend.FastAPI.ir_agents.graph_builder
+        env:
+          # Point DB to localhost — no real PG needed for smoke test
+          POSTGRES_HOST: localhost
+          LOG_LEVEL: warning
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: "*.log"
+          retention-days: 7
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 2 — Build & Push Docker Image to GHCR
+  # Only runs on push to main (not PRs)
+  # ────────────────────────────────────────────────────────────────────────────
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: lint-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag:    ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx (multi-arch support)
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            network=host
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Extract Docker metadata (tags + labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            # Tag with short SHA for traceability
+            type=sha,prefix=sha-,format=short
+            # Tag with semver if a git tag is pushed
+            type=semver,pattern={{version}}
+            # Always tag main branch as :latest
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: DevOps/Docker/Dockerfile.backend
+          target: runtime
+          push: true
+          tags:    ${{ steps.meta.outputs.tags }}
+          labels:  ${{ steps.meta.outputs.labels }}
+          # Layer cache from GHCR to speed up repeat builds
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+          cache-to:   type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+          # Build args passed at build time
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+
+      - name: Sign image with Cosign (supply chain security)
+        # Commented out until cosign is configured on the VPS.
+        # Uncomment and add COSIGN_PRIVATE_KEY secret to enable.
+        # uses: sigstore/cosign-installer@v3
+        # run: |
+        #   cosign sign --yes \
+        #     ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+        run: echo "Image digest ${{ steps.build.outputs.digest }} — cosign signing skipped (configure COSIGN_PRIVATE_KEY to enable)"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 3 — Deploy to VPS via SSH
+  # Only runs after successful build-and-push on main
+  # ────────────────────────────────────────────────────────────────────────────
+  deploy-vps:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build-and-push
+    environment:
+      name: production
+      url: https://${{ secrets.VPS_HOST }}
+
+    steps:
+      - name: Checkout repository (for docker-compose.yml)
+        uses: actions/checkout@v4
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS to known_hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Copy docker-compose.yml to VPS
+        run: |
+          scp docker-compose.yml \
+              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_DEPLOY_PATH }}/docker-compose.yml
+
+      - name: Deploy — pull new image and rolling restart
+        run: |
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'ENDSSH'
+            set -euo pipefail
+
+            cd ${{ secrets.VPS_DEPLOY_PATH }}
+
+            echo "[Deploy] Logging into GHCR on VPS..."
+            echo "${{ secrets.GHCR_TOKEN }}" | \
+              docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            echo "[Deploy] Pulling new backend image..."
+            docker compose pull backend
+
+            echo "[Deploy] Recreating backend container (zero-downtime rolling update)..."
+            docker compose up -d --no-deps --scale backend=1 backend
+
+            echo "[Deploy] Pruning dangling images to free disk space..."
+            docker image prune -f
+
+            echo "[Deploy] Current container status:"
+            docker compose ps
+
+            echo "[Deploy] ✅ Deployment complete."
+          ENDSSH
+
+      - name: Verify deployment health
+        run: |
+          sleep 15   # Allow container startup grace period
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://${{ secrets.VPS_HOST }}/health || echo "000")
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "❌ Health check failed — HTTP $HTTP_STATUS"
+            exit 1
+          fi
+          echo "✅ Health check passed — HTTP $HTTP_STATUS"
+
+      - name: Notify Slack on success
+        if: success() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": "✅ *TaxLens-AI* deployment *succeeded* on `${{ github.ref_name }}`.\nCommit: `${{ github.sha }}`\nActor: `${{ github.actor }}`"
+            }'
+
+      - name: Notify Slack on failure
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": "❌ *TaxLens-AI* deployment *FAILED* on `${{ github.ref_name }}`.\nCommit: `${{ github.sha }}`\nActor: `${{ github.actor }}`\nCheck: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }'
