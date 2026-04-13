@@ -3,8 +3,9 @@
 # Copyright: TaxLens-AI by Đoàn Hoàng Việt (Việt Gamer)
 # =============================================================================
 # Services:
-#   db      : PostgreSQL 16 (audit trail persistence)
-#   backend : FastAPI + LangGraph IR agent stack
+#   db       : PostgreSQL 16 (audit trail persistence)
+#   backend  : FastAPI + LangGraph IR agent stack
+#   frontend : Next.js 14 IR Dashboard (Chat Investigate, Audit Log)
 #
 # Network:
 #   taxlens_net : Isolated bridge network — services communicate by name
@@ -131,6 +132,47 @@ services:
         limits:
           cpus: "2.0"
           memory: 1G
+
+  # ── Next.js Frontend — IR Dashboard ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./Frontend                          # Next.js source directory
+      dockerfile: ../DevOps/Docker/Dockerfile.frontend
+      args:
+        # Backend reachable from browser — use host machine IP or public URL
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+
+    container_name: taxlens_frontend
+    image: taxlens-ai-frontend:latest
+
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+
+    networks:
+      - taxlens_net
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    restart: unless-stopped
+
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
 # ── Named Volumes ─────────────────────────────────────────────────────────────
 volumes:

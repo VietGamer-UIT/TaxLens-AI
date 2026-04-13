@@ -1,0 +1,74 @@
+# =============================================================================
+# TaxLens-AI :: Dockerfile — Next.js Frontend (Multi-Stage)
+# Copyright: TaxLens-AI by Đoàn Hoàng Việt (Việt Gamer)
+# =============================================================================
+# Stage 1 (deps)    : Install production dependencies only
+# Stage 2 (builder) : Build the Next.js standalone output
+# Stage 3 (runner)  : Minimal Alpine runtime image (~120 MB final)
+#
+# Build from repo root:
+#   docker build -f DevOps/Docker/Dockerfile.frontend -t taxlens-ai-frontend:latest ./Frontend
+# =============================================================================
+
+# ── Stage 1: deps ────────────────────────────────────────────────────────────
+FROM node:20-alpine AS deps
+
+# Required build tools for native modules
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+# Copy only package manifests first — maximise layer cache hits
+COPY package.json package-lock.json* ./
+
+# Install prod+dev deps needed for the build step (prune later)
+RUN npm ci --ignore-scripts
+
+
+# ── Stage 2: builder ─────────────────────────────────────────────────────────
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Bring in installed node_modules from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy source
+COPY . .
+
+# Set the backend URL at build time (can be overridden by --build-arg)
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+# Disable Next.js telemetry
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN npm run build
+
+
+# ── Stage 3: runner ───────────────────────────────────────────────────────────
+FROM node:20-alpine AS runner
+
+# Security: non-root user
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 nextjs
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+
+# Copy only what Next.js standalone output needs
+COPY --from=builder /app/public          ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static     ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:3000/ || exit 1
+
+CMD ["node", "server.js"]
