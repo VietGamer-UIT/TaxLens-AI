@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Shadcn UI HSL Custom Properties — Dark Cybersecurity Theme ─────────── */
+@layer base {
+  :root {
+    --background:        224 71% 4%;       /* #060b18 — deep navy */
+    --foreground:        213 31% 91%;      /* #dce7f4 — light grey-blue */
+    --card:              224 49% 8%;       /* #0d1526 — card surface */
+    --card-foreground:   213 31% 91%;
+    --popover:           224 49% 8%;
+    --popover-foreground:213 31% 91%;
+    --primary:           217 91% 60%;      /* #3b82f6 — blue-500 */
+    --primary-foreground:222 47% 11%;
+    --secondary:         222 47% 11%;      /* #111827 */
+    --secondary-foreground: 213 31% 91%;
+    --muted:             223 47% 11%;
+    --muted-foreground:  215 16% 47%;      /* #64748b — slate-500 */
+    --accent:            186 100% 42%;     /* #00cfe8 — cyan */
+    --accent-foreground: 224 71% 4%;
+    --destructive:       0 63% 31%;        /* #7f1d1d */
+    --destructive-foreground: 213 31% 91%;
+    --border:            216 34% 17%;      /* #1e2d47 */
+    --input:             216 34% 17%;
+    --ring:              215 91% 66%;      /* #60a5fa */
+    --radius:            0.5rem;
+  }
+}
+
+/* ── Base Reset ─────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border box-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Monospace for technical data (hashes, IDs, paths) */
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+  }
+}
+
+/* ── Custom Scrollbar ───────────────────────────────────────────────────── */
+::-webkit-scrollbar          { width: 5px; height: 5px; }
+::-webkit-scrollbar-track    { background: hsl(var(--background)); }
+::-webkit-scrollbar-thumb    { background: hsl(var(--border)); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+
+/* ── Skeleton Shimmer Animation ─────────────────────────────────────────── */
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: hsl(var(--muted));
+}
+.skeleton-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--border) / 0.4) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.6s infinite;
+}
+
+/* ── Glow utilities for cybersecurity aesthetic ─────────────────────────── */
+.glow-blue  { box-shadow: 0 0 20px hsl(217 91% 60% / 0.15); }
+.glow-cyan  { box-shadow: 0 0 20px hsl(186 100% 42% / 0.15); }
+.glow-red   { box-shadow: 0 0 20px hsl(0 84% 60% / 0.15);   }
+
+/* ── Fade-in animation for results ─────────────────────────────────────── */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0);     }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out both;
+}
+
+/* ── Dot pulse loader ───────────────────────────────────────────────────── */
+@keyframes dot-bounce {
+  0%, 80%, 100% { transform: translateY(0);    opacity: 0.3; }
+  40%           { transform: translateY(-6px); opacity: 1;   }
+}
+.dot-pulse > span {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  animation: dot-bounce 1.4s ease-in-out infinite;
+}
+.dot-pulse > span:nth-child(2) { animation-delay: 0.2s; }
+.dot-pulse > span:nth-child(3) { animation-delay: 0.4s; }
+
+/* ── Prose override for report markdown ─────────────────────────────────── */
+.prose {
+  --tw-prose-body:        hsl(var(--foreground));
+  --tw-prose-headings:    hsl(var(--foreground));
+  --tw-prose-code:        hsl(var(--accent));
+  --tw-prose-pre-bg:      hsl(var(--secondary));
+  --tw-prose-bullets:     hsl(var(--muted-foreground));
+  --tw-prose-counters:    hsl(var(--muted-foreground));
+  --tw-prose-hr:          hsl(var(--border));
+}
