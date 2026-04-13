@@ -373,5 +373,4 @@ flowchart LR
 
 ---
 
-*Developed by Đoàn Hoàng Việt (Việt Gamer) — Principal Developer.*  
-*TaxLens-AI v1.0.0 — SANS FIND EVIL! × Splunk Agentic Ops Hackathon 2024*
+*Developed by Đoàn Hoàng Việt (Việt Gamer) — Principal Developer.*
