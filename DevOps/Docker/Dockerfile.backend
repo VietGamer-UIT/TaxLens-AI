@@ -48,10 +48,10 @@ RUN pip install --upgrade pip \
 FROM python:3.11-slim AS runtime
 
 # OCI image labels (supply chain transparency for hackathon judges)
-LABEL org.opencontainers.image.title="ThreatLens-IR Backend" \
+LABEL org.opencontainers.image.title="TaxLens-AI Backend" \
     org.opencontainers.image.description="Multi-Agent Incident Response & Observability Platform" \
     org.opencontainers.image.version="1.0.0" \
-    org.opencontainers.image.source="https://github.com/VietGamer-UIT/ThreatLens-IR" \
+    org.opencontainers.image.source="https://github.com/VietGamer-UIT/TaxLens-AI" \
     org.opencontainers.image.licenses="MIT"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

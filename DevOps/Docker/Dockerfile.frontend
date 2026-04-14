@@ -22,8 +22,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # Install prod+dev deps needed for the build step (prune later)
-RUN npm ci --ignore-scripts
-
+RUN npm install --ignore-scripts
 
 # ── Stage 2: builder ─────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
@@ -51,7 +50,7 @@ FROM node:20-alpine AS runner
 
 # Security: non-root user
 RUN addgroup --system --gid 1001 nodejs \
- && adduser  --system --uid 1001 nextjs
+  && adduser  --system --uid 1001 nextjs
 
 WORKDIR /app
 
