@@ -30,7 +30,6 @@
 8. [Environment Variables](#environment-variables)
 9. [Project Structure](#project-structure)
 10. [CI/CD Pipeline](#cicd-pipeline)
-11. [Hackathon Alignment](#hackathon-alignment)
 
 ---
 
@@ -346,30 +345,6 @@ flowchart LR
 | `VPS_SSH_KEY` | ED25519 private key (no passphrase) |
 | `VPS_DEPLOY_PATH` | Absolute deploy path on VPS (e.g. `/opt/taxlens-ai`) |
 | `SLACK_WEBHOOK_URL` | (Optional) Slack webhook for deployment alerts |
-
----
-
-## Hackathon Alignment
-
-### SANS "FIND EVIL!" Criteria
-
-| Criterion | TaxLens-AI Implementation |
-|---|---|
-| **Evidence Integrity** | SHA-256 hash of IRAgentState snapshot stored per event in `audit_events.sha256_state_hash` |
-| **Forensic Tool Integration** | MCP wrappers for Volatility3 (pslist, netscan, malfind) and log2timeline/Plaso |
-| **Audit Trail** | Immutable PostgreSQL ledger — zero UPDATE/DELETE code paths; DB-server clock (`recorded_at`) |
-| **Read-Only Operations** | Write-op denylist in `forensics_mcp.py`; SPL mutation guard in `splunk_mcp.py` |
-| **Structured Output** | Every tool returns `{"status": "ok"|"error", "data": {...}}` — machine-parseable chain of evidence |
-
-### Splunk Agentic Ops Criteria
-
-| Criterion | TaxLens-AI Implementation |
-|---|---|
-| **SPL Integration** | `run_spl_search` wraps full Splunk REST job lifecycle (create → poll → fetch) |
-| **Notable Events** | `get_notable_events` surfaces ES alerts with severity, risk score, and rule name |
-| **Agentic Automation** | LangGraph Supervisor routes autonomously across 3 specialist agents without human intervention |
-| **Observability** | `AuditMiddleware` captures every HTTP request; `@audit_tool_call` captures every tool call |
-| **Token Accounting** | `token_prompt`, `token_completion`, `token_total` tracked per event for cost observability |
 
 ---
 
