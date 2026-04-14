@@ -92,21 +92,44 @@ app = FastAPI(
 app.add_middleware(AuditMiddleware)
 
 # ---------------------------------------------------------------------------
-# CORS — explicitly whitelist the Next.js frontend origins.
-# NOTE: allow_origins=["*"] is INCOMPATIBLE with allow_credentials=True in
-#       modern browsers (CORS spec §3.2.2). Always use explicit origins.
+# CORS — Smart Origin Matching
 # ---------------------------------------------------------------------------
-_ALLOWED_ORIGINS = [
-    "http://localhost:3000",       # Next.js dev server
-    "http://127.0.0.1:3000",      # alternate localhost form
-    "http://frontend:3000",        # Docker Compose service name
-    # Add your VPS / production domain here, e.g.:
-    # "https://taxlens.yourdomain.com",
-]
+# WHY allow_origin_regex instead of allow_origins=["..."]?
+#
+# GitHub Codespaces (and similar cloud IDEs) generate unpredictable,
+# per-user, per-session hostnames like:
+#   https://someuser-laughing-space-abc12345-8000.app.github.dev
+#
+# A static whitelist can NEVER enumerate these upfront.  The CORS spec
+# (Fetch §4.6) allows the server to respond with a matching Origin header
+# if it passes a regex check — Starlette (FastAPI's ASGI layer) implements
+# this via the `allow_origin_regex` parameter.
+#
+# Regex anatomy:
+#   http://localhost:\d+             — any local port (3000, 8000, etc.)
+#   http://127\.0\.0\.1:\d+         — numeric loopback           
+#   http://frontend:\d+              — Docker-internal service name
+#   https://[\w-]+-\d+\.app\.github\.dev   — Codespaces port URLs
+#   https://[\w-]+\.preview\.app\.github\.dev — Codespaces preview
+#
+# SECURITY NOTE: allow_credentials=True REQUIRES that allow_origins is NOT
+# ["*"] (the spec forbids this combination).  The regex approach is both
+# safe (specific pattern) and flexible (handles dynamic domains).
+# ---------------------------------------------------------------------------
+_CORS_ORIGIN_REGEX = (
+    r"http://localhost:\d+"
+    r"|http://127\.0\.0\.1:\d+"
+    r"|http://frontend:\d+"
+    r"|https://[\w\-]+-\d+\.app\.github\.dev"
+    r"|https://[\w\-]+\.preview\.app\.github\.dev"
+    # Add your production domain, e.g.:
+    # r"|https://taxlens\.yourdomain\.com"
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_ALLOWED_ORIGINS,
+    allow_origins=[],              # empty — regex handles all matching
+    allow_origin_regex=_CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
