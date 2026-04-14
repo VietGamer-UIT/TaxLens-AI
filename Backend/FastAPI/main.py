@@ -119,11 +119,8 @@ app.add_middleware(AuditMiddleware)
 _CORS_ORIGIN_REGEX = (
     r"http://localhost:\d+"
     r"|http://127\.0\.0\.1:\d+"
-    r"|http://frontend:\d+"
-    r"|https://[\w\-]+-\d+\.app\.github\.dev"
-    r"|https://[\w\-]+\.preview\.app\.github\.dev"
-    # Add your production domain, e.g.:
-    # r"|https://taxlens\.yourdomain\.com"
+    r"|https://.*-3000\.app\.github\.dev"
+    r"|https://.*-3000\.preview\.app\.github\.dev"
 )
 
 app.add_middleware(
@@ -131,8 +128,8 @@ app.add_middleware(
     allow_origins=[],              # empty — regex handles all matching
     allow_origin_regex=_CORS_ORIGIN_REGEX,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_methods=["*"],           # Cho phép all methods
+    allow_headers=["*"],           # Cho phép all headers
     expose_headers=["X-Incident-ID"],
 )
 

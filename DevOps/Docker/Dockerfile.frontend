@@ -35,18 +35,10 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy source
 COPY . .
 
-# CRITICAL — Leave this EMPTY by default so the smart browser-side URL
-# resolver in lib/api.ts takes over at runtime:
-#
-#   On Codespaces  : browser auto-detects <name>-8000.app.github.dev
-#   On localhost   : browser auto-detects http://localhost:8000
-#   On VPS/prod    : pass real URL via --build-arg or .env
-#
-# If you set this to 'http://localhost:8000' the Next.js bundle bakes that
-# URL in and ALL Codespaces users will call their OWN machine — not the
-# cloud container. That is why the connection always failed.
-ARG NEXT_PUBLIC_API_URL=
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# CRITICAL — Đã gỡ bỏ NEXT_PUBLIC_API_URL khỏi ARG và ENV theo yêu cầu của Việt Gamer (TaxLens-AI).
+# Điều này đảm bảo API base không bao giờ bị hardcode vào JS Bundle, 
+# ép buộc Client phải sử dụng hàm Smart Resolver trong `api.ts`.
+
 
 # Disable Next.js telemetry
 ENV NEXT_TELEMETRY_DISABLED=1

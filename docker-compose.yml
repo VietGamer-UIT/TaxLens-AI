@@ -136,25 +136,14 @@ services:
   # ── Next.js Frontend — IR Dashboard ─────────────────────────────────────────
   frontend:
     build:
-      context: ./Frontend                          # Next.js source directory
+      context: ./Frontend
       dockerfile: ../DevOps/Docker/Dockerfile.frontend
-      args:
-        # WHY EMPTY DEFAULT?
-        # NEXT_PUBLIC_* vars are baked into the JS bundle at `next build`.
-        # If we hardcode http://localhost:8000, Codespaces browsers call their
-        # own machine instead of the cloud container — so it always fails.
-        # Empty → api.ts smart resolver detects correct URL from browser hostname.
-        # To override for VPS: set NEXT_PUBLIC_API_URL=https://api.yourdomain.com in .env
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
 
     container_name: taxlens_frontend
     image: taxlens-ai-frontend:latest
 
     environment:
       NODE_ENV: production
-      # This runtime value is ignored for NEXT_PUBLIC_ vars (already baked at build).
-      # Kept here for documentation purposes only.
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
 
     ports:
       - "${FRONTEND_PORT:-3000}:3000"

@@ -148,10 +148,15 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm text-red-400">Không thể kết nối tới Backend API</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Hãy chắc chắn backend đang chạy tại{' '}
-                    <code className="font-mono text-xs">
+                    URL Backend đang cố gắng kết nối:
+                  </p>
+                  <div className="mt-1 flex items-center justify-between rounded bg-destructive/10 px-2 py-1">
+                    <code className="font-mono text-xs text-red-400 font-bold select-all">
                       {API_BASE}
                     </code>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2 italic">
+                    (Vui lòng đảm bảo bạn đã Set Port 8000 thành "Public" trong Codespaces)
                   </p>
                 </div>
               </>

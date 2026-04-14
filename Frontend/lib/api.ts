@@ -15,30 +15,27 @@ import axios, { AxiosError } from 'axios'
 // Smart base URL — resolved once at module load time (client side)
 // ---------------------------------------------------------------------------
 function resolveApiBase(): string {
-  // P1: explicit env var — works when baked in at build time
-  const fromEnv = process.env.NEXT_PUBLIC_API_URL
-  if (fromEnv && fromEnv.trim() !== '') return fromEnv.trim()
-
-  // P2: browser-based hostname detection — runs only in browser (not SSR)
+  // P1: Browser-based hostname detection — chạy chuẩn nhất trên Codespaces/Cloud IDE
   if (typeof window !== 'undefined') {
     const { protocol, hostname } = window.location
 
-    // GitHub Codespaces: <name>-3000.app.github.dev → <name>-8000.app.github.dev
-    if (hostname.endsWith('.app.github.dev')) {
-      const backendHost = hostname.replace(/-\d+\.app\.github\.dev$/, '-8000.app.github.dev')
+    // GitHub Codespaces: Nếu origin là port 3000, tự động chuyển hướng API về port 8000
+    // VD: https://abc-3000.app.github.dev -> https://abc-8000.app.github.dev
+    if (hostname.includes('.app.github.dev')) {
+      const backendHost = hostname.replace(/-3000\.app\.github\.dev$/, '-8000.app.github.dev')
       return `${protocol}//${backendHost}`
     }
 
-    // Standard localhost or local Docker
+    // Các môi trường local
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return `${protocol}//${hostname}:8000`
+      return `${protocol}//localhost:8000`
     }
 
-    // Generic: same host, port 8000
+    // Generic fallback (Cùng host, port 8000)
     return `${protocol}//${hostname}:8000`
   }
 
-  // P3: SSR / build-time fallback
+  // P2: Phản hồi an toàn nếu SSR (Bị gọi từ server NEXT)
   return 'http://localhost:8000'
 }
 
