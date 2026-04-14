@@ -35,8 +35,17 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy source
 COPY . .
 
-# Set the backend URL at build time (can be overridden by --build-arg)
-ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+# CRITICAL — Leave this EMPTY by default so the smart browser-side URL
+# resolver in lib/api.ts takes over at runtime:
+#
+#   On Codespaces  : browser auto-detects <name>-8000.app.github.dev
+#   On localhost   : browser auto-detects http://localhost:8000
+#   On VPS/prod    : pass real URL via --build-arg or .env
+#
+# If you set this to 'http://localhost:8000' the Next.js bundle bakes that
+# URL in and ALL Codespaces users will call their OWN machine — not the
+# cloud container. That is why the connection always failed.
+ARG NEXT_PUBLIC_API_URL=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 # Disable Next.js telemetry
