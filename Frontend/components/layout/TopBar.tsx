@@ -7,7 +7,7 @@ import { Activity } from 'lucide-react'
 const ROUTE_LABELS: Record<string, { title: string; subtitle: string }> = {
   '/':           { title: 'Bảng Điều Khiển',    subtitle: 'Tổng quan hệ thống TaxLens-AI' },
   '/investigate':{ title: 'Chat Điều Tra',        subtitle: 'Khởi động điều tra đa tác nhân AI' },
-  '/audit':      { title: 'Nhật Ký Kiểm Toán',   subtitle: 'Lịch sử sự kiện chuẩn SANS FIND EVIL!' },
+  '/audit':      { title: 'Nhật Ký Kiểm Toán',   subtitle: 'Lịch sử sự kiện điều tra số bất biến' },
 }
 
 export function TopBar() {

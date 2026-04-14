@@ -9,7 +9,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { checkHealth } from '@/lib/api'
+import { checkHealth, API_BASE } from '@/lib/api'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -73,7 +73,7 @@ export default function DashboardPage() {
         </div>
         <div className="relative">
           <Badge variant="cyan" className="mb-3 text-[11px]">
-            HACKATHON DEMO — SANS FIND EVIL! × Splunk Agentic Ops 2024
+            Nền Tảng Điều Tra Sự Cố Đa Tác Nhân AI
           </Badge>
           <h2 className="mb-2 text-3xl font-bold tracking-tight text-foreground">
             TaxLens-<span className="text-primary">AI</span>
@@ -150,7 +150,7 @@ export default function DashboardPage() {
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Hãy chắc chắn backend đang chạy tại{' '}
                     <code className="font-mono text-xs">
-                      {process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'}
+                      {API_BASE}
                     </code>
                   </p>
                 </div>

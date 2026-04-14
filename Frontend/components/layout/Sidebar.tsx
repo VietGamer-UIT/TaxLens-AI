@@ -54,7 +54,7 @@ export function Sidebar() {
             TaxLens
             <span className="text-primary">-AI</span>
           </p>
-          <p className="text-[10px] text-muted-foreground">IR Platform v1.0</p>
+          <p className="text-[10px] text-muted-foreground">IR Platform</p>
         </div>
       </div>
 

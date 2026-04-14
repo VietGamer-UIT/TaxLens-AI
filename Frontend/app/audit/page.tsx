@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import {
   Search, RefreshCw, ScrollText, AlertTriangle,
   CheckCircle2, XCircle, Clock, Wrench,
@@ -23,7 +24,7 @@ import {
 // Status badge colour mapping
 // ---------------------------------------------------------------------------
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { variant: 'success' | 'destructive' | 'warning' | 'default'; icon: React.ReactNode }> = {
+  const map: Record<string, { variant: 'success' | 'destructive' | 'warning' | 'default'; icon: ReactNode }> = {
     ok:      { variant: 'success',     icon: <CheckCircle2 className="h-3 w-3" /> },
     error:   { variant: 'destructive', icon: <XCircle className="h-3 w-3" /> },
     blocked: { variant: 'warning',     icon: <AlertTriangle className="h-3 w-3" /> },
@@ -123,13 +124,13 @@ export default function AuditPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <ScrollText className="h-5 w-5 text-primary" />
-            Nhật Ký Kiểm Toán — Chuẩn SANS FIND EVIL!
+            Nhật Ký Kiểm Toán Hệ Thống
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="mb-4 text-sm text-muted-foreground">
             Mỗi sự kiện được ghi bất biến vào PostgreSQL với mã băm SHA-256 để đảm bảo
-            tính toàn vẹn của bằng chứng theo tiêu chuẩn điều tra số.
+            tính toàn vẹn của bằng chứng theo tiêu chuẩn điều tra số pháp y.
           </p>
           {/* Search Bar */}
           <div className="flex gap-2">
